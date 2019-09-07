@@ -1,18 +1,37 @@
 const express = require('express');
-const cors = require("cors");
+const path = require('path');
+
 const app = express();
-const port = process.env.PORT || 5000;
-const base = "/api/";
 
+// Routes
+app.use('/api/discord', require('./api/discord'));
 
-app.use(cors);
-
-// console.log that your server is up and running
-app.listen(port, () => console.log(`Listening on port ${port}`));
-
-app.get(base, (req, res) => {
-    res.send('Api is functional and ready');
+app.use((err, req, res, next) => {
+    switch (err.message) {
+        case 'NoCodeProvided':
+            return res.status(400).send({
+                status: 'ERROR',
+                error: err.message + " | " + "Bad Request",
+            });
+        case 'Unauthorized':
+            return res.status(401).send({
+                status: 'ERROR',
+                error: error.message + " | " + "Not Authorized to perform this request."
+            });
+        default:
+            return res.status(500).send({
+                status: 'ERROR',
+                error: err.message,
+            });
+    }
 });
 
 
-// create a GET route
+app.get('/', (req, res) => {
+    res.status(200).send("The server is up and running.")
+});
+
+
+app.listen(5000, () => {
+    console.info('Running on port 5000');
+});
