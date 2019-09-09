@@ -4,11 +4,11 @@ const path = require('path');
 const app = express();
 
 // Routes
-app.use('/api/discord', require('./api/discord'));
+app.use('/api/auth', require('./api/auth'));
 
 app.use((err, req, res, next) => {
     switch (err.message) {
-        case 'NoCodeProvided':
+        case 'NoCodeProvided' || 'NoTokenProvided':
             return res.status(400).send({
                 status: 'ERROR',
                 error: err.message + " | " + "Bad Request",
@@ -16,7 +16,7 @@ app.use((err, req, res, next) => {
         case 'Unauthorized':
             return res.status(401).send({
                 status: 'ERROR',
-                error: error.message + " | " + "Not Authorized to perform this request."
+                error: err.message + " | " + "Not Authorized to perform this request."
             });
         default:
             return res.status(500).send({

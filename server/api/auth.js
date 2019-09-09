@@ -2,12 +2,34 @@ const express = require('express');
 const fetch = require('node-fetch');
 const btoa = require('btoa');
 const { catchAsync } = require('../utils');
-
 const router = express.Router();
 
 const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
-const redirect = encodeURIComponent('http://localhost:5000/api/discord/callback');
+const SITE_LOC = process.env.SITE_LOC;
+
+const redirect = encodeURIComponent('http://localhost:5000/api/auth/callback');
+
+//JWT
+const jwt = require('jsonwebtoken');
+const fs = require('fs');
+
+const privateKey = fs.readFileSync('private.key');
+const publicKey = fs.readFileSync('public.key');
+
+function encrypt(data){
+    return jwt.sign(data, privateKey, { algorithm: 'RS256', expiresIn: '1m'});
+}
+
+function verify(inputJWT) {
+    try {
+        return jwt.verify(inputJWT, publicKey , {algorithms: ['RS256']});
+    } catch (e) {
+        throw new Error('Unauthorized');
+    }
+}
+
+// Router
 
 router.get('/login', (req, res) => {
     res.redirect(`https://discordapp.com/api/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${redirect}&response_type=code&scope=identify`);
@@ -25,7 +47,6 @@ router.get('/callback', catchAsync(async (req, res) => {
             },
         });
     const json = await response.json();
-    console.log(json);
     if(!json.access_token)
         if(json.error_description && json.error)
             throw new Error(json.error + " | " + json.error_description);
@@ -46,11 +67,12 @@ async function authenticate(access_token, res) {
     let identity = await response.json();
 
     console.log("Identity: " + JSON.stringify(identity));
-    if(identity.id && identity.id === "217015504932438026")
-        res.status(200).send("You have been authorized");
+    if(identity.id && identity.id === "217015504932438026") {
+        let token = encrypt({id: identity.id});
+        res.status(200).redirect(SITE_LOC + 'login?token=' + token);
+    }
     else
         throw new Error('Unauthorized')
 }
-
 
 module.exports = router;
