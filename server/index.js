@@ -1,9 +1,11 @@
 const express = require('express');
 const path = require('path');
-
+const cors = require('cors');
 const app = express();
 
 // Routes
+app.use(cors());
+
 app.use('/api/auth', require('./api/auth'));
 
 app.use((err, req, res, next) => {
