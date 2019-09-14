@@ -18,7 +18,7 @@ const privateKey = fs.readFileSync('private.key');
 const publicKey = fs.readFileSync('public.key');
 
 function encrypt(data){
-    return jwt.sign(data, privateKey, { algorithm: 'RS256', expiresIn: '1m'});
+    return jwt.sign(data, privateKey, { algorithm: 'RS256', expiresIn: '10s'});
 }
 
 function verify(inputJWT) {
@@ -47,6 +47,8 @@ router.get('/callback', catchAsync(async (req, res) => {
             },
         });
     const json = await response.json();
+    if(json.scope !== 'identify')
+        throw new Error('Unauthorized');
     if(!json.access_token)
         if(json.error_description && json.error)
             throw new Error(json.error + " | " + json.error_description);
@@ -66,7 +68,7 @@ async function authenticate(access_token, res) {
         });
     let identity = await response.json();
 
-    console.log("Identity: " + JSON.stringify(identity));
+    // console.log("Identity: " + JSON.stringify(identity));
     if(identity.id && identity.id === "217015504932438026") {
         let token = encrypt({id: identity.id});
         res.status(200).redirect(SITE_LOC + 'login?token=' + token);
@@ -74,5 +76,12 @@ async function authenticate(access_token, res) {
     else
         throw new Error('Unauthorized')
 }
+
+router.get('/validate',catchAsync(async (req,res)=> {
+    if(!req.query.token)
+        throw new Error('NoTokenProvided');
+    verify(req.query.token);
+    res.status(200).send({status: "VALID"});
+}));
 
 module.exports = router;
