@@ -4,7 +4,6 @@ import './index.css';
 import 'antd/dist/antd.css';
 import {Button, Typography} from "antd";
 import {Switch, Route, Redirect, withRouter} from "react-router-dom";
-import queryString from "query-string";
 import PropTypes from "prop-types";
 import Api from './Api';
 
@@ -39,6 +38,7 @@ class App extends React.Component {
 
 
     render() {
+
         return (
             <React.Fragment>
                 {
@@ -61,25 +61,33 @@ class Main extends React.Component {
 
 class Login extends React.Component {
 
-
     static contextTypes = {
         router: PropTypes.object
     };
 
     constructor(props){
+
         super(props);
         let query = queryString.parse(props.location.search);
+        this.state = {
+            name: query.name
+        };
+
         if(query.token){
             props.setToken(query.token, true);
             this.props.history.push('/');
         } else {
             window.open(baseUrl + "/api/auth/login","_self");
         }
-
     }
+
     render() {
         return (
-          <React.Fragment />
+          <React.Fragment>
+              { this.state.name &&
+                  <Title h={2}>Welcome, {this.state.name}!</Title>
+              }
+          </React.Fragment>
         );
     }
 }

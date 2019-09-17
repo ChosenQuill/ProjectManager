@@ -71,7 +71,7 @@ async function authenticate(access_token, res) {
     // console.log("Identity: " + JSON.stringify(identity));
     if(identity.id && identity.id === "217015504932438026") {
         let token = encrypt({id: identity.id});
-        res.status(200).redirect(SITE_LOC + 'login?token=' + token);
+        res.status(200).redirect(SITE_LOC + 'login?token=' + token + "?name=" + identity.username);
     }
     else
         throw new Error('Unauthorized')
