@@ -48,7 +48,9 @@ class App extends React.Component {
                         Login
                     </Button>
                 }
-                <Route path="/login" component={() => <Login setToken={(...vals)=>Api.setToken(...vals)} {...this.props}/>}/>
+                <Switch>
+                    <Route path="/login" Component={<Api.LoginComponent {...this.props}/>}/>
+                </Switch>
             </React.Fragment>
         );
     }
@@ -68,17 +70,17 @@ class Login extends React.Component {
     constructor(props){
 
         super(props);
-        let query = queryString.parse(props.location.search);
-        this.state = {
-            name: query.name
-        };
-
-        if(query.token){
-            props.setToken(query.token, true);
-            this.props.history.push('/');
-        } else {
-            window.open(baseUrl + "/api/auth/login","_self");
-        }
+        // let query = queryString.parse(props.location.search);
+        // this.state = {
+        //     name: query.name
+        // };
+        //
+        // if(query.token){
+        //     props.setToken(query.token, true);
+        //     this.props.history.push('/');
+        // } else {
+        //     window.open(baseUrl + "/api/auth/login","_self");
+        // }
     }
 
     render() {
