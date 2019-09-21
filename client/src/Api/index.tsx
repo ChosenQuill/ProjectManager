@@ -1,6 +1,7 @@
 import React, {useState} from "react";
+import {withRouter, Route} from "react-router-dom";
 import queryString from "query-string";
-import {withRouter} from "react-router-dom";
+
 const baseUrl = "http://localhost:5000";
 
 class Api {
@@ -29,18 +30,22 @@ class Api {
         }
     }
 
+    public LoginComponent = withRouter(({history, ...props}) => this.LoginComponentFunc(props,history));
 
-    public static LoginComponent = withRouter(({history, ...props}) => Api.LoginComponentFunc(props,history));
-
-    private static LoginComponentFunc(props, history){
-        let query = queryString.parse(location.search);
-
+    private LoginComponentFunc(props,history){
+        console.log("Login Component");
+        console.log(props);
+        let query = queryString.parse(props.location.search);
         if(query.token){
-            props.setToken(query.token, true);
+            this.setToken(query.token, true);
             history.push('/');
         } else {
             window.open(baseUrl + "/api/auth/login","_self");
         }
+
+        return (
+            <React.Fragment>Some Stuff</React.Fragment>
+        );
     }
 
     login() {
