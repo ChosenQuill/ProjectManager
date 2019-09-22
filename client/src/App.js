@@ -13,29 +13,6 @@ const baseUrl = process.env.SITE_LOC;
 
 class App extends React.Component {
 
-    constructor(props) {
-        super(props);
-        // this.validate = this.validate.bind(this);
-        // this.setToken = this.setToken.bind(this);
-        //
-        // let token = localStorage.getItem('token');
-        //
-        // if(token != null) {
-        //     this.state.loggedIn = true;
-        //     this.state.jwt = token;
-        //     this.validate(token)
-        //         .then(res=>{
-        //             if(res === false){
-        //                 localStorage.removeItem("token");
-        //                 this.state.loggedIn = false;
-        //                 this.state.jwt = null;
-        //             }
-        //         });
-        // }
-        // console.log(token);
-    }
-
-
     render() {
 
         return (

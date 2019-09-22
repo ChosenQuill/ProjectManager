@@ -17,8 +17,28 @@ const fs = require('fs');
 const privateKey = fs.readFileSync('private.key');
 const publicKey = fs.readFileSync('public.key');
 
+router.use((err, req, res, next) => {
+    switch (err.message) {
+        case 'NoCodeProvided' || 'NoTokenProvided':
+            return res.status(400).send({
+                status: 'ERROR',
+                error: err.message + " | " + "Bad Request",
+            });
+        case 'Unauthorized':
+            return res.status(401).send({
+                status: 'ERROR',
+                error: err.message + " | " + "Not Authorized to perform this request."
+            });
+        default:
+            return res.status(500).send({
+                status: 'ERROR',
+                error: err.message,
+            });
+    }
+});
+
 function encrypt(data){
-    return jwt.sign(data, privateKey, { algorithm: 'RS256', expiresIn: '10s'});
+    return jwt.sign(data, privateKey, { algorithm: 'RS256', expiresIn: '1d'});
 }
 
 function verify(inputJWT) {
@@ -71,7 +91,7 @@ async function authenticate(access_token, res) {
     // console.log("Identity: " + JSON.stringify(identity));
     if(identity.id && identity.id === "217015504932438026") {
         let token = encrypt({id: identity.id});
-        res.status(200).redirect(SITE_LOC + 'login?token=' + token + "?name=" + identity.username);
+        res.status(200).redirect(SITE_LOC + 'login?token=' + token);
     }
     else
         throw new Error('Unauthorized')
