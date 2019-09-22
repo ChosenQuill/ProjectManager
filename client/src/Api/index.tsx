@@ -1,10 +1,10 @@
 import React, {useState} from "react";
 import {withRouter, Route} from "react-router-dom";
 import queryString from "query-string";
-
-const baseUrl = "http://localhost:5000";
+import Enviroment from "./Enviroment";
 
 class Api {
+    public baseUrl = "http://localhost:5000";
     private data = {};
     private jwt : String = localStorage.getItem('token');
 
@@ -25,7 +25,7 @@ class Api {
         if(!this.jwt)
             return false;
         try {
-            let res = await fetch(baseUrl + '/api/auth/validate?token=' + this.jwt);
+            let res = await fetch(this.baseUrl + '/api/auth/validate?token=' + this.jwt);
             return res.status === 200;
         } catch (err) {
             console.log(err);
@@ -41,7 +41,9 @@ class Api {
             this.setToken(query.token, true);
             history.push('/');
         } else {
-            window.open(baseUrl + "/api/auth/login","_self");
+            console.log(Enviroment);
+
+            //window.open(this.baseUrl + "/api/auth/login","_self");
         }
 
         return (
@@ -50,7 +52,8 @@ class Api {
     }
 
     login() {
-        window.open(baseUrl + "/api/auth/login","_self");
+        window.open(this.baseUrl + "/api/auth/login","_self");
+        window.open(this.baseUrl + "/api/auth/login","_self");
     }
 
 
