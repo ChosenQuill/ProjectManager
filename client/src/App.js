@@ -4,10 +4,8 @@ import './index.css';
 import 'antd/dist/antd.css';
 import {Button, Typography} from "antd";
 import {Switch, Route, Redirect, withRouter} from "react-router-dom";
-import queryString from "query-string";
 import PropTypes from "prop-types";
 import Api from './Api';
-
 
 const {Paragraph, Title} = Typography;
 
@@ -39,6 +37,7 @@ class App extends React.Component {
 
 
     render() {
+
         return (
             <React.Fragment>
                 {
@@ -48,40 +47,12 @@ class App extends React.Component {
                         Login
                     </Button>
                 }
-                <Route path="/login" component={() => <Login setToken={(...vals)=>Api.setToken(...vals)} {...this.props}/>}/>
+                <Route path="/login" render={() => <Api.LoginComponent />}/>
             </React.Fragment>
         );
     }
 
 }
 
-class Main extends React.Component {
-
-}
-
-class Login extends React.Component {
-
-
-    static contextTypes = {
-        router: PropTypes.object
-    };
-
-    constructor(props){
-        super(props);
-        let query = queryString.parse(props.location.search);
-        if(query.token){
-            props.setToken(query.token, true);
-            this.props.history.push('/');
-        } else {
-            window.open(baseUrl + "/api/auth/login","_self");
-        }
-
-    }
-    render() {
-        return (
-          <React.Fragment />
-        );
-    }
-}
 
 export default withRouter(App);

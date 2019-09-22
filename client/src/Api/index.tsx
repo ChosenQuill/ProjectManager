@@ -1,4 +1,6 @@
-import {useState} from "react";
+import React, {useState} from "react";
+import {withRouter, Route} from "react-router-dom";
+import queryString from "query-string";
 
 const baseUrl = "http://localhost:5000";
 
@@ -6,15 +8,15 @@ class Api {
     private data = {};
     private jwt : String = localStorage.getItem('token');
 
-
-
     constructor(){
-
         if(this.jwt){
             this.validate().then(res=>{
                 if(res === false){
                     this.clearData();
                 }
+            }).catch(err=>{
+                console.log("Error validating token, logging out.");
+                this.clearData();
             })
         }
     }
@@ -31,9 +33,26 @@ class Api {
         }
     }
 
+    public LoginComponent = withRouter(({location,history}) => this.LoginComponentFunc(location,history));
+
+    private LoginComponentFunc(location,history){
+        let query = queryString.parse(location.search);
+        if(query.token){
+            this.setToken(query.token, true);
+            history.push('/');
+        } else {
+            window.open(baseUrl + "/api/auth/login","_self");
+        }
+
+        return (
+            <React.Fragment/>
+        );
+    }
+
     login() {
         window.open(baseUrl + "/api/auth/login","_self");
     }
+
 
     isLoggedIn() : boolean {
         return (this.jwt !== null);
@@ -51,8 +70,12 @@ class Api {
         this.jwt = token;
     }
 
+    getData(name: string){
+        return this.data[name];
+    }
+
 }
 
-const ApiInstance : Api = new Api();
+const APIInstance = new Api();
 
-export default ApiInstance;
+export default APIInstance;
