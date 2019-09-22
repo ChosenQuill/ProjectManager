@@ -7,7 +7,6 @@ import {Switch, Route, Redirect, withRouter} from "react-router-dom";
 import PropTypes from "prop-types";
 import Api from './Api';
 
-
 const {Paragraph, Title} = Typography;
 
 const baseUrl = process.env.SITE_LOC;
@@ -48,50 +47,12 @@ class App extends React.Component {
                         Login
                     </Button>
                 }
-                <Switch>
-                    <Route path="/login" Component={<Api.LoginComponent {...this.props}/>}/>
-                </Switch>
+                <Route path="/login" render={() => <Api.LoginComponent />}/>
             </React.Fragment>
         );
     }
 
 }
 
-class Main extends React.Component {
-
-}
-
-class Login extends React.Component {
-
-    static contextTypes = {
-        router: PropTypes.object
-    };
-
-    constructor(props){
-
-        super(props);
-        // let query = queryString.parse(props.location.search);
-        // this.state = {
-        //     name: query.name
-        // };
-        //
-        // if(query.token){
-        //     props.setToken(query.token, true);
-        //     this.props.history.push('/');
-        // } else {
-        //     window.open(baseUrl + "/api/auth/login","_self");
-        // }
-    }
-
-    render() {
-        return (
-          <React.Fragment>
-              { this.state.name &&
-                  <Title h={2}>Welcome, {this.state.name}!</Title>
-              }
-          </React.Fragment>
-        );
-    }
-}
 
 export default withRouter(App);

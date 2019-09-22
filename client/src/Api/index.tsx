@@ -14,6 +14,9 @@ class Api {
                 if(res === false){
                     this.clearData();
                 }
+            }).catch(err=>{
+                console.log("Error validating token, logging out.");
+                this.clearData();
             })
         }
     }
@@ -30,12 +33,10 @@ class Api {
         }
     }
 
-    public LoginComponent = withRouter(({history, ...props}) => this.LoginComponentFunc(props,history));
+    public LoginComponent = withRouter(({location,history}) => this.LoginComponentFunc(location,history));
 
-    private LoginComponentFunc(props,history){
-        console.log("Login Component");
-        console.log(props);
-        let query = queryString.parse(props.location.search);
+    private LoginComponentFunc(location,history){
+        let query = queryString.parse(location.search);
         if(query.token){
             this.setToken(query.token, true);
             history.push('/');
@@ -44,7 +45,7 @@ class Api {
         }
 
         return (
-            <React.Fragment>Some Stuff</React.Fragment>
+            <React.Fragment/>
         );
     }
 
