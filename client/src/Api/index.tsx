@@ -1,7 +1,6 @@
 import React, {useState} from "react";
 import {withRouter, Route} from "react-router-dom";
 import queryString from "query-string";
-import Enviroment from "./Enviroment";
 
 class Api {
     public baseUrl = "http://localhost:5000";
@@ -41,8 +40,6 @@ class Api {
             this.setToken(query.token, true);
             history.push('/');
         } else {
-            console.log(Enviroment);
-
             //window.open(this.baseUrl + "/api/auth/login","_self");
         }
 

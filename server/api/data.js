@@ -47,15 +47,14 @@ const resolvers = {
 };
 
 const server = new ApolloServer({ typeDefs, resolvers, context: ({req})=>{
-    console.log("getting context");
-        if(req.query.authorization) {
+        if(req.headers.authorization) {
             try{
-                console.log(token.verify(req.query.authorization));
-            } catch (e) {
+                return {user: token.verify(req.headers.authorization)};
+            } catch(e){
                 console.log(e);
             }
         }
-        return {user: {name: "Something", id: "asdfafs", avatar: "idk"}};
+        return {};
     }});
-asdf
+
 module.exports = server;

@@ -2,6 +2,8 @@ const express = require('express');
 const fetch = require('node-fetch');
 const btoa = require('btoa');
 const { catchAsync } = require('../utils');
+const token = require('./token');
+
 const router = express.Router();
 
 const CLIENT_ID = process.env.CLIENT_ID;
@@ -10,44 +12,6 @@ const SITE_LOC = process.env.SITE_LOC;
 
 const redirect = encodeURIComponent('http://localhost:5000/api/auth/callback');
 
-//JWT
-const jwt = require('jsonwebtoken');
-const fs = require('fs');
-
-const privateKey = fs.readFileSync('private.key');
-const publicKey = fs.readFileSync('public.key');
-
-router.use((err, req, res, next) => {
-    switch (err.message) {
-        case 'NoCodeProvided' || 'NoTokenProvided':
-            return res.status(400).send({
-                status: 'ERROR',
-                error: err.message + " | " + "Bad Request",
-            });
-        case 'Unauthorized':
-            return res.status(401).send({
-                status: 'ERROR',
-                error: err.message + " | " + "Not Authorized to perform this request."
-            });
-        default:
-            return res.status(500).send({
-                status: 'ERROR',
-                error: err.message,
-            });
-    }
-});
-
-function encrypt(data){
-    return jwt.sign(data, privateKey, { algorithm: 'RS256', expiresIn: '1d'});
-}
-
-function verify(inputJWT) {
-    try {
-        return jwt.verify(inputJWT, publicKey , {algorithms: ['RS256']});
-    } catch (e) {
-        throw new Error('Unauthorized');
-    }
-}
 
 // Router
 
@@ -88,9 +52,10 @@ async function authenticate(access_token, res) {
         });
     let identity = await response.json();
 
-    // console.log("Identity: " + JSON.stringify(identity));
+    console.log("Identity: " + JSON.stringify(identity));
     if(identity.id && identity.id === "217015504932438026") {
-        let token = encrypt({id: identity.id});
+        let token = token.encrypt({id: identity.id, name: identity.username, avatar: identity.avatar});
+        console.log("JWT Token: " + token);
         res.status(200).redirect(SITE_LOC + 'login?token=' + token);
     }
     else
@@ -100,7 +65,11 @@ async function authenticate(access_token, res) {
 router.get('/validate',catchAsync(async (req,res)=> {
     if(!req.query.token)
         throw new Error('NoTokenProvided');
-    verify(req.query.token);
+    try {
+        token.verify(req.query.token);
+    } catch (e) {
+        throw new Error('Unauthorized');
+    }
     res.status(200).send({status: "VALID"});
 }));
 
