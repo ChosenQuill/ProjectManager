@@ -15,13 +15,21 @@ const typeDefs = gql`
       name: String
       id: ID
       avatar: String
+      role: Role!
+      permissionLevel: Int!
+  }
+  
+  enum Role {
+      GUEST,
+      MEMBER,
+      ADMIN
   }
 
   # The "Query" type is special: it lists all of the available queries that
   # clients can execute, along with the return type for each. In this
   # case, the "books" query returns an array of zero or more Books (defined above).
   type Query {
-      me: User
+      me: User!
     books: [Book]
   }
 `;
@@ -49,12 +57,13 @@ const resolvers = {
 const server = new ApolloServer({ typeDefs, resolvers, context: ({req})=>{
         if(req.headers.authorization) {
             try{
-                return {user: token.verify(req.headers.authorization)};
+                let userVals = token.verify(req.headers.authorization);
+                return {user: {role: userVals.id === '217015504932438026' ? 'ADMIN' : 'MEMBER',...userVals}};
             } catch(e){
                 console.log(e);
             }
         }
-        return {};
+        return {user: {role: "GUEST", permissionLevel: 0}};
     }});
 
 module.exports = server;

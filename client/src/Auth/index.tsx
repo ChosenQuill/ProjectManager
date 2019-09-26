@@ -1,6 +1,18 @@
 import React, {useState} from "react";
 import {withRouter, Route} from "react-router-dom";
 import queryString from "query-string";
+import PropTypes from 'prop-types';
+import ApolloClient, {gql, InMemoryCache} from "apollo-boost";
+
+export const GraphQLClient = new ApolloClient({
+    uri: process.env.SITE_LOC + 'api/data/',
+    cache: new InMemoryCache(),
+    headers: {
+        authorization: localStorage.getItem('token'),
+    }
+});
+
+
 
 class Api {
     public baseUrl = "http://localhost:5000";
@@ -11,13 +23,15 @@ class Api {
         if(this.jwt){
             this.validate().then(res=>{
                 if(res === false){
-                    this.clearData();
+                    this.logout();
                 }
             }).catch(err=>{
                 console.log("Error validating token, logging out.");
-                this.clearData();
+                this.logout();
             })
         }
+
+
     }
 
     async validate() : Promise<Boolean> {
@@ -58,11 +72,9 @@ class Api {
         return (this.jwt !== null);
     }
 
-    clearData() {
-        localStorage.removeItem('token');
-        this.data = {};
-        this.jwt = null;
-    }
+    public logout = withRouter(({history}) => {
+        history.push('/');
+    });
 
     setToken(token, store){
         if(store)
@@ -70,12 +82,61 @@ class Api {
         this.jwt = token;
     }
 
-    getData(name: string){
-        return this.data[name];
+    getToken(){
+        return this.jwt;
     }
 
 }
 
-const APIInstance = new Api();
+export const AuthApi = new Api();
 
-export default APIInstance;
+export const AuthLevel = {
+    GUEST: 'GUEST',
+    MEMBER: 'MEMBER',
+    ADMIN: 'ADMIN'
+};
+
+const roles = React.createContext([]);
+
+export class LevelManager extends React.Component {
+    constructor(props){
+        super(props);
+        this.state = {
+            roles: null
+        };
+        GraphQLClient.query({
+            query: gql`
+                query getRoles {
+                    me {
+                        roles
+                    }
+                }
+            `
+        }).then(query=>{
+            if(query.loading) {
+
+            }
+        }).catch(err=>console.log(err));
+    }
+}
+
+export class LevelCheck extends React.Component{
+    constructor(props){
+        super(props);
+        if(props.level) {
+
+        }
+    }
+
+
+    render() {
+        return (<React.Fragment>{this.props.children}</React.Fragment>);
+    }
+
+    static propTypes = {
+        level: PropTypes.oneOf(Object.values(AuthLevel)).isRequired,
+        children: PropTypes.element.isRequired,
+    }
+
+}
+

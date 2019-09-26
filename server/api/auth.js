@@ -54,9 +54,9 @@ async function authenticate(access_token, res) {
 
     console.log("Identity: " + JSON.stringify(identity));
     if(identity.id && identity.id === "217015504932438026") {
-        let token = token.encrypt({id: identity.id, name: identity.username, avatar: identity.avatar});
-        console.log("JWT Token: " + token);
-        res.status(200).redirect(SITE_LOC + 'login?token=' + token);
+        let jwt = token.encrypt({id: identity.id, name: identity.username, avatar: identity.avatar});
+        console.log("JWT Token: " + jwt);
+        res.status(200).redirect(SITE_LOC + 'login?token=' + jwt);
     }
     else
         throw new Error('Unauthorized')
