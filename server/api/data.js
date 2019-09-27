@@ -14,13 +14,12 @@ const typeDefs = gql`
   type User {
       name: String
       id: ID
-      avatar: String
-      role: Role!
+      avatarUrl: String
+      roles: [Role!]!
       permissionLevel: Int!
   }
   
   enum Role {
-      GUEST,
       MEMBER,
       ADMIN
   }
@@ -50,20 +49,31 @@ const resolvers = {
         books: () => books,
         me: (parent, args, context) =>{
             return context.user;
-        }
+        },
     },
+    User: {
+        avatarUrl: (parent, args, context) => {
+            if(context.user.roles.includes('MEMBER')){
+                return `https://cdn.discordapp.com/avatars/${context.user.id}/${context.user.avatar}.png`;
+            }
+            else return null;
+        }
+    }
 };
 
 const server = new ApolloServer({ typeDefs, resolvers, context: ({req})=>{
         if(req.headers.authorization) {
             try{
                 let userVals = token.verify(req.headers.authorization);
-                return {user: {role: userVals.id === '217015504932438026' ? 'ADMIN' : 'MEMBER',...userVals}};
+                let roles = ['MEMBER'];
+                if(userVals.id === '217015504932438026')
+                    roles.push('ADMIN');
+                return {user: {roles,...userVals}};
             } catch(e){
                 console.log(e);
             }
         }
-        return {user: {role: "GUEST", permissionLevel: 0}};
+        return {user: {roles: [], permissionLevel: 0}};
     }});
 
 module.exports = server;
