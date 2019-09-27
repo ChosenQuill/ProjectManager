@@ -1,14 +1,13 @@
 const express = require('express');
-const path = require('path');
 const cors = require('cors');
 const app = express();
 
 // Routes
 app.use(cors());
 
-app.use('/api/auth', require('./api/auth'));
 
-app.use((err, req, res, next) => {
+app.use('/api/auth', require('./api/auth'));
+app.use('/api/auth',(err, req, res, next) => {
     switch (err.message) {
         case 'NoCodeProvided' || 'NoTokenProvided':
             return res.status(400).send({
@@ -28,6 +27,7 @@ app.use((err, req, res, next) => {
     }
 });
 
+require('./api/data').applyMiddleware({app, path: "/api/data"});
 
 app.get('/', (req, res) => {
     res.status(200).send("The server is up and running.")

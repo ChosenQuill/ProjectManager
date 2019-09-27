@@ -2,6 +2,8 @@ const express = require('express');
 const fetch = require('node-fetch');
 const btoa = require('btoa');
 const { catchAsync } = require('../utils');
+const token = require('./token');
+
 const router = express.Router();
 
 const CLIENT_ID = process.env.CLIENT_ID;
@@ -10,24 +12,6 @@ const SITE_LOC = process.env.SITE_LOC;
 
 const redirect = encodeURIComponent('http://localhost:5000/api/auth/callback');
 
-//JWT
-const jwt = require('jsonwebtoken');
-const fs = require('fs');
-
-const privateKey = fs.readFileSync('private.key');
-const publicKey = fs.readFileSync('public.key');
-
-function encrypt(data){
-    return jwt.sign(data, privateKey, { algorithm: 'RS256', expiresIn: '10s'});
-}
-
-function verify(inputJWT) {
-    try {
-        return jwt.verify(inputJWT, publicKey , {algorithms: ['RS256']});
-    } catch (e) {
-        throw new Error('Unauthorized');
-    }
-}
 
 // Router
 
@@ -68,10 +52,11 @@ async function authenticate(access_token, res) {
         });
     let identity = await response.json();
 
-    // console.log("Identity: " + JSON.stringify(identity));
-    if(identity.id && identity.id === "217015504932438026") {
-        let token = encrypt({id: identity.id});
-        res.status(200).redirect(SITE_LOC + 'login?token=' + token + "?name=" + identity.username);
+    console.log("Identity: " + JSON.stringify(identity));
+    if(identity.id) {
+        let jwt = token.encrypt({id: identity.id, name: identity.username, avatar: identity.avatar});
+        console.log("JWT Token: " + jwt);
+        res.status(200).redirect(SITE_LOC + 'login?token=' + jwt);
     }
     else
         throw new Error('Unauthorized')
@@ -80,7 +65,11 @@ async function authenticate(access_token, res) {
 router.get('/validate',catchAsync(async (req,res)=> {
     if(!req.query.token)
         throw new Error('NoTokenProvided');
-    verify(req.query.token);
+    try {
+        token.verify(req.query.token);
+    } catch (e) {
+        throw new Error('Unauthorized');
+    }
     res.status(200).send({status: "VALID"});
 }));
 
