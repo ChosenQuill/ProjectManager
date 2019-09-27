@@ -53,7 +53,7 @@ async function authenticate(access_token, res) {
     let identity = await response.json();
 
     console.log("Identity: " + JSON.stringify(identity));
-    if(identity.id && identity.id === "217015504932438026") {
+    if(identity.id) {
         let jwt = token.encrypt({id: identity.id, name: identity.username, avatar: identity.avatar});
         console.log("JWT Token: " + jwt);
         res.status(200).redirect(SITE_LOC + 'login?token=' + jwt);
