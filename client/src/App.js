@@ -32,7 +32,7 @@ function Profile() {
     }
     console.log(data);
     return (
-        <Row type='flex' justify='center' align='middle'>
+        <Row type='flex' justify='center' align='middle' style={{marginBottom:'24px'}}>
             <Col span={6}>
                 <img src={data.me.avatarUrl} alt='Image Here'
                      style={{float: 'left', marginRight: '30px', width: '25%', borderRadius: '20%'}}/>
@@ -64,7 +64,7 @@ class App extends React.Component {
                                     return (
                                         <div>
                                             <Title level={4} type={"secondary"}>
-                                                Logged In: {loggedIn ? 'True' : 'False'}
+                                                Logged In: {loggedIn ? 'True' : 'False'} | Auth Status: {status}
                                             </Title>
                                             {
                                                 loggedIn ?
@@ -81,7 +81,7 @@ class App extends React.Component {
                                 <Route path="/login" render={() => <AuthApi.LoginComponent/>}/>
                                 <LevelCheck level={AuthLevel.MEMBER}>
                                     <Profile/>
-                                    <Row style={{marginTop: '24px'}}>
+                                    <Row>
                                         <Paragraph style={{fontSize: '24px'}}>
                                             Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
                                             tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
