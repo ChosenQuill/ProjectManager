@@ -1,55 +1,83 @@
 const { ApolloServer, gql } = require('apollo-server-express');
 const {buildSchema} = require('graphql');
 const token = require('./token');
+const {ProjectList} = require('../data-manager');
 
 const typeDefs = gql`
-  # Comments in GraphQL strings (such as this one) start with the hash (#) symbol.
+    # Comments in GraphQL strings (such as this one) start with the hash (#) symbol.
 
-  # This "Book" type defines the queryable fields for every book in our data source.
-  type Book {
-    title: String
-    author: String
-  }
-  
-  type User {
-      name: String
-      id: ID
-      avatarUrl: String
-      roles: [Role!]!
-      permissionLevel: Int!
-  }
-  
-  enum Role {
-      MEMBER,
-      ADMIN
-  }
+    # This "Book" type defines the queryable fields for every book in our data source.
+    type Book {
+        title: String
+        author: String
+    }
 
-  # The "Query" type is special: it lists all of the available queries that
-  # clients can execute, along with the return type for each. In this
-  # case, the "books" query returns an array of zero or more Books (defined above).
-  type Query {
-      me: User!
-    books: [Book]
-  }
+    type Project {
+        name: String
+        description: String
+    }
+    
+    type Status {
+        completed: Boolean!
+        message: String
+    }
+    
+    type User {
+        name: String
+        id: ID
+        avatarUrl: String
+        roles: [Role!]!
+        permissionLevel: Int!
+    }
+
+    enum Role {
+        MEMBER,
+        ADMIN
+    }
+
+    # The "Query" type is special: it lists all of the available queries that
+    # clients can execute, along with the return type for each. In this
+    # case, the "books" query returns an array of zero or more Books (defined above).
+    type Query {
+        me: User!
+        projects: [Project!]!
+    }
+    
+    input ProjectData {
+        description: String
+    }
+
+    type ProjectOps {
+        create(data : ProjectData) : Status!
+        update(data : ProjectData) : Status!
+        remove : Status!
+    }
+
+    type Mutation {
+        Project(name: String) : ProjectOps
+        test(var: String) : String
+    }
 `;
 
-const books = [
-    {
-        title: 'Harry Potter and the Chamber of Secrets',
-        author: 'J.K. Rowling',
-    },
-    {
-        title: 'Jurassic Park',
-        author: 'Michael Crichton',
-    },
-];
-
 const resolvers = {
+    Mutation: {
+        test: (parent, args, context) => {
+            console.log(parent,args,context);
+            return args.var;
+        },
+        Project: (parent, args, context) =>{
+            if(!context.user.roles.includes('ADMIN')){
+                return null;
+            }
+            return ({name: args.name});
+        }
+
+    },
     Query: {
-        books: () => books,
         me: (parent, args, context) =>{
             return context.user;
         },
+        projects: ()=> ProjectList,
     },
     User: {
         avatarUrl: (parent, args, context) => {
@@ -58,7 +86,16 @@ const resolvers = {
             }
             else return null;
         }
-    }
+    },
+    ProjectOps: {
+        create: (parent, args, context) => {
+            return createProject(parent.name, new Project(...args.data));
+
+        },
+        remove: (parent, args, context) => {
+            return true;
+        }
+    },
 };
 
 const server = new ApolloServer({ typeDefs, resolvers, context: ({req})=>{
