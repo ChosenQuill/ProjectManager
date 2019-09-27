@@ -1,54 +1,104 @@
-import React from 'react';
-import './index.css';
+import React, {useState} from 'react';
+import './App.css';
 
-import 'antd/dist/antd.css';
-import {Button, Typography} from "antd";
-import {Switch, Route, Redirect, withRouter} from "react-router-dom";
-import PropTypes from "prop-types";
-import Api from './Api';
+import {Button, Card, Col, Layout, message, Row, Typography} from "antd";
+import {Route, withRouter} from "react-router-dom";
+import {AuthApi, AuthLevel, GetRoles, GraphQLClient, LevelCheck, LevelManager} from './Auth';
+import {ApolloProvider, useQuery} from '@apollo/react-hooks';
+import {gql} from 'apollo-boost';
+import Loading from "./Components/Loading";
 
-const {Paragraph, Title} = Typography;
+const {Paragraph, Title, Text} = Typography;
+const {Header, Content, Footer, Sider} = Layout;
 
-const baseUrl = process.env.SITE_LOC;
+const ProfileQuery = gql`
+    query getProfile {
+        me {
+            name,
+            avatarUrl,
+        }
+    }
+`;
+
+function Profile() {
+    const {loading, error, data} = useQuery(ProfileQuery);
+    const [errorDisplayed, setErrorDisplayed] = useState(false);
+    if (loading)
+        return (<Loading/>)
+    if (error && !errorDisplayed) {
+        console.log(error.message);
+        message.error(error.message, 20);
+        setErrorDisplayed(true);
+    }
+    console.log(data);
+    return (
+        <Row type='flex' justify='center' align='middle'>
+            <Col span={6}>
+                <img src={data.me.avatarUrl} alt='Image Here'
+                     style={{float: 'left', marginRight: '30px', width: '25%', borderRadius: '20%'}}/>
+                <Title level={1} style={{margin: 0}}>Welcome {data.me.name}!</Title>
+            </Col>
+        </Row>
+    );
+}
 
 class App extends React.Component {
-
     constructor(props) {
         super(props);
-        // this.validate = this.validate.bind(this);
-        // this.setToken = this.setToken.bind(this);
-        //
-        // let token = localStorage.getItem('token');
-        //
-        // if(token != null) {
-        //     this.state.loggedIn = true;
-        //     this.state.jwt = token;
-        //     this.validate(token)
-        //         .then(res=>{
-        //             if(res === false){
-        //                 localStorage.removeItem("token");
-        //                 this.state.loggedIn = false;
-        //                 this.state.jwt = null;
-        //             }
-        //         });
-        // }
-        // console.log(token);
+
     }
 
-
     render() {
-
         return (
-            <React.Fragment>
-                {
-                    Api.isLoggedIn() ? <Title level={2}>
-                        You are Logged In
-                    </Title> : <Button type="primary" size="large" style={{margin: "10px"}} onClick={()=>Api.login()}>
-                        Login
-                    </Button>
-                }
-                <Route path="/login" render={() => <Api.LoginComponent />}/>
-            </React.Fragment>
+            <ApolloProvider client={GraphQLClient}>
+                <LevelManager>
+                    <Layout className='layout'>
+                        <Content>
+                            <Card style={{margin: '20px'}}>
+
+
+                                <GetRoles children={({roles, status}) => {
+                                    let loggedIn = false;
+                                    if (roles.includes('MEMBER'))
+                                        loggedIn = true;
+                                    return (
+                                        <div>
+                                            <Title level={4} type={"secondary"}>
+                                                Logged In: {loggedIn ? 'True' : 'False'}
+                                            </Title>
+                                            {
+                                                loggedIn ?
+                                                    <Button onClick={() => AuthApi.logout()} type='primary'>Log
+                                                        Out</Button> :
+                                                    <Button type='primary' onClick={() => AuthApi.login()}>Log
+                                                        In</Button>
+                                            }
+                                        </div>
+
+                                    )
+                                }}/>
+
+                                <Route path="/login" render={() => <AuthApi.LoginComponent/>}/>
+                                <LevelCheck level={AuthLevel.MEMBER}>
+                                    <Profile/>
+                                    <Row style={{marginTop: '24px'}}>
+                                        <Paragraph style={{fontSize: '24px'}}>
+                                            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
+                                            tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam,
+                                            quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
+                                            consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse
+                                            cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat
+                                            non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+                                        </Paragraph>
+                                    </Row>
+                                </LevelCheck>
+                            </Card>
+                        </Content>
+                    </Layout>
+                </LevelManager>
+            </ApolloProvider>
+
+
         );
     }
 
