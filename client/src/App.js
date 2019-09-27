@@ -32,12 +32,10 @@ function Profile() {
     }
     console.log(data);
     return (
-        <Row type='flex' justify='center' align='middle' style={{marginBottom:'24px'}}>
-            <Col span={6}>
+        <Row type='flex' justify='center' align='middle'>
                 <img src={data.me.avatarUrl} alt='Image Here'
-                     style={{float: 'left', marginRight: '30px', width: '25%', borderRadius: '20%'}}/>
-                <Title level={1} style={{margin: 0}}>Welcome {data.me.name}!</Title>
-            </Col>
+                     style={{float: 'left', marginRight: '30px', width: '90px', borderRadius: '20%'}}/>
+                <Title level={1} style={{margin: 0}}>Welcome<br />{data.me.name}!</Title>
         </Row>
     );
 }
@@ -55,8 +53,6 @@ class App extends React.Component {
                     <Layout className='layout'>
                         <Content>
                             <Card style={{margin: '20px'}}>
-
-
                                 <GetRoles children={({roles, status}) => {
                                     let loggedIn = false;
                                     if (roles.includes('MEMBER'))
