@@ -1,7 +1,7 @@
 const { ApolloServer, gql } = require('apollo-server-express');
 const {buildSchema} = require('graphql');
 const token = require('./token');
-const {ProjectList} = require('../data-manager');
+const {ProjectList, createProject, deleteProject, updateProject, projectArray, ProjectData} = require('../data-manager');
 
 const typeDefs = gql`
     # Comments in GraphQL strings (such as this one) start with the hash (#) symbol.
@@ -12,22 +12,16 @@ const typeDefs = gql`
         author: String
     }
 
-    type Project {
-        name: String
-        description: String
-    }
-    
     type Status {
         completed: Boolean!
         message: String
     }
-    
+
     type User {
         name: String
         id: ID
         avatarUrl: String
         roles: [Role!]!
-        permissionLevel: Int!
     }
 
     enum Role {
@@ -35,36 +29,37 @@ const typeDefs = gql`
         ADMIN
     }
 
+    input ProjectInput {
+        description: String
+    }
+
+    type ProjectData {
+        name: String
+        description: String
+    }
+
+    type ProjectOps {
+        create(data : ProjectInput) : Status!
+        update(data : ProjectInput) : Status!
+        remove : Status!
+    }
+
     # The "Query" type is special: it lists all of the available queries that
     # clients can execute, along with the return type for each. In this
     # case, the "books" query returns an array of zero or more Books (defined above).
     type Query {
         me: User!
-        projects: [Project!]!
-    }
-    
-    input ProjectData {
-        description: String
+        projects: [ProjectData!]!
     }
 
-    type ProjectOps {
-        create(data : ProjectData) : Status!
-        update(data : ProjectData) : Status!
-        remove : Status!
-    }
 
     type Mutation {
         Project(name: String) : ProjectOps
-        test(var: String) : String
     }
 `;
 
 const resolvers = {
     Mutation: {
-        test: (parent, args, context) => {
-            console.log(parent,args,context);
-            return args.var;
-        },
         Project: (parent, args, context) =>{
             if(!context.user.roles.includes('ADMIN')){
                 return null;
@@ -77,7 +72,9 @@ const resolvers = {
         me: (parent, args, context) =>{
             return context.user;
         },
-        projects: ()=> ProjectList,
+        projects: ()=> {
+            return projectArray();
+        },
     },
     User: {
         avatarUrl: (parent, args, context) => {
@@ -89,13 +86,19 @@ const resolvers = {
     },
     ProjectOps: {
         create: (parent, args, context) => {
-            return createProject(parent.name, new Project(...args.data));
-
+            return createProject(parent.name, new ProjectData(args.data.description));
         },
         remove: (parent, args, context) => {
-            return true;
+            return deleteProject(parent.name);
+        },
+        update: (parent, args, context) =>{
+            return updateProject(parent.name, new ProjectData(args.data.description));
         }
     },
+    ProjectData: (parent, args, context) =>{
+        console.log(parent,args,context);
+        return null;
+    }
 };
 
 const server = new ApolloServer({ typeDefs, resolvers, context: ({req})=>{
@@ -106,7 +109,7 @@ const server = new ApolloServer({ typeDefs, resolvers, context: ({req})=>{
                 if(userVals.id === '217015504932438026')
                     roles.push('ADMIN');
                 return {user: {roles,...userVals}};
-            } catch(e){
+            } catch(e) {
                 console.log(e);
             }
         }

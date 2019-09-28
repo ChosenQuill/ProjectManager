@@ -32,7 +32,7 @@ function Profile() {
     }
     console.log(data);
     return (
-        <Row type='flex' justify='center' align='middle'>
+        <Row type='flex' justify='center' align='middle' style={{marginBottom:'20px'}}>
                 <img src={data.me.avatarUrl} alt='Image Here'
                      style={{float: 'left', marginRight: '30px', width: '90px', borderRadius: '20%'}}/>
                 <Title level={1} style={{margin: 0}}>Welcome<br />{data.me.name}!</Title>
