@@ -1,9 +1,27 @@
-body > #root > div {
-  height: 100vh;
-}
+@import url('https://fonts.googleapis.com/css?family=IBM+Plex+Sans:500&display=swap');
+
 .layout {
   position: absolute;
   height:100%;
   width:100%;
 }
 
+.header {
+  position:sticky;
+}
+
+.card {
+  margin: 20px;
+}
+
+.content {
+  background-color: rgba(0,0,0,.08);
+  height: 100%;
+  border-style: dashed;
+
+}
+
+#page {
+  height: 100vh;
+  background-image: url('./cubes.png');
+}
