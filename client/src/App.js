@@ -1,5 +1,9 @@
 import React, {useEffect, useRef, useState} from 'react';
 import './App.css';
+import './Normalize.css';
+
+import * as THREE from './three.min.js'
+import WAVES from './waves.min.js'
 
 import {Button, Card, Col, Icon, Layout, Menu, message, Row, Typography} from "antd";
 import {motion, useAnimation} from 'framer-motion';
@@ -20,6 +24,26 @@ const ProfileQuery = gql`
         }
     }
 `;
+
+function Background(props){
+    const [vantaEffect, setVantaEffect] = useState(0)
+    const myRef = useRef(null)
+    useEffect(() => {
+        if (!vantaEffect) {
+            setVantaEffect(BIRDS({
+                el: myRef.current
+            }))
+        }
+        return () => {
+            if (vantaEffect) vantaEffect.destroy()
+        }
+    }, [vantaEffect]);
+    return (
+        <div ref={myRef}>
+            props.children
+        </div>
+    );
+}
 
 function Profile() {
     const {loading, error, data} = useQuery(ProfileQuery);
@@ -92,21 +116,19 @@ function SlidingText(props) {
     }, []);
 
     return (
-        <div style={{width: '100vw', textAlign: 'center', outlineStyle: 'solid', height: '200px'}}>
+        <div style={{height: '200px', width: '100%', display: 'flex',justifyContent:'center', alignItems:'center'}}>
             <div style={{
                 fontSize: '48px',
                 fontFamily: '\'IBM Plex Sans\', sans-serif',
-                position: 'absolute',
                 width: '700px',
-                // outlineStyle: 'solid',
                 textAlign: 'left',
-                display: 'inline-block',
-                transform: 'translateX(-40%)',
+                transform: 'translateX(20%)',
+                margin: 0
             }}>
                 <div>
                     Hi, my name is Rithvik.
                 </div>
-                <div style={{marginLeft: '100px'}}>
+                <div >
                     <div style={{float: 'left', display: 'inline-block'}}>
                         I am a&nbsp;
                     </div>

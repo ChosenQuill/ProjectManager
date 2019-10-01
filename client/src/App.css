@@ -7,7 +7,6 @@
 }
 
 .header {
-  position:sticky;
 }
 
 .card {
@@ -15,13 +14,22 @@
 }
 
 .content {
-  background-color: rgba(0,0,0,.08);
   height: 100%;
-  border-style: dashed;
-
 }
 
 #page {
-  height: 100vh;
+  height: 100%;
+  margin: 0;
   background-image: url('./cubes.png');
+  background-repeat: repeat;
+  background-color: rgba(0,0,0,.08);
+}
+
+html,body,#root,#page { height: auto; margin: 0}
+
+html {
+  overflow: hidden;
+}
+body {
+  overflow: auto;
 }
