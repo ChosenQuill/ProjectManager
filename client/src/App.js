@@ -1,7 +1,8 @@
-import React, {useState} from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import './App.css';
 
 import {Button, Card, Col, Icon, Layout, Menu, message, Row, Typography} from "antd";
+import {motion, useAnimation} from 'framer-motion';
 import {Route, withRouter} from "react-router-dom";
 import {AuthApi, AuthLevel, GetRoles, GraphQLClient, LevelCheck, LevelManager} from './Auth';
 import {ApolloProvider, useQuery} from '@apollo/react-hooks';
@@ -40,16 +41,98 @@ function Profile() {
     );
 }
 
+const slidingVariants = {
+    main: {
+        opacity: [0, 1, 0],
+        y: [-50, 0, 50]
+    },
+    finish: {
+        opacity: [0, 1, 1],
+        y: [-50, 0, 0]
+    },
+    empty: {
+        // opacity: 0
+    },
+};
+
+const text = [
+    'Director',
+    'Developer',
+    'Designer',
+    'Video Editor',
+    'Content Producer',
+    'Creator'
+];
+
+function SlidingText(props) {
+    const controls = useAnimation();
+    const [cPos, setCPos] = useState(-1);
+    const latestPos = useRef(null);
+    const stopText = useEffect(() => {
+        const loopCode = (interval) => {
+            setCPos(c => {
+                latestPos.current = c + 1;
+                return c + 1;
+            });
+            if (latestPos.current >= text.length - 1 && interval) {
+                clearInterval(interval);
+                controls.start('finish');
+            } else {
+                controls.start('main');
+            }
+
+        };
+        loopCode();
+        const interval = setInterval(() => {
+            loopCode(interval);
+        }, 5000);
+        return () => {
+            clearInterval(interval);
+        };
+    }, []);
+
+    return (
+        <div style={{width: '100vw', textAlign: 'center', outlineStyle: 'solid', height: '200px'}}>
+            <div style={{
+                fontSize: '48px',
+                fontFamily: '\'IBM Plex Sans\', sans-serif',
+                position: 'absolute',
+                width: '700px',
+                // outlineStyle: 'solid',
+                textAlign: 'left',
+                display: 'inline-block',
+                transform: 'translateX(-40%)',
+            }}>
+                <div>
+                    Hi, my name is Rithvik.
+                </div>
+                <div style={{marginLeft: '100px'}}>
+                    <div style={{float: 'left', display: 'inline-block'}}>
+                        I am a&nbsp;
+                    </div>
+                    <motion.div style={{display: 'inline-block'}} initial='empty' animate={controls}
+                                transition={{duration: 5, ease: 'anticipate'}} variants={slidingVariants}>
+                        {text[cPos]}.
+                    </motion.div>
+                </div>
+            </div>
+        </div>
+
+    );
+}
+
 
 class App extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
             sideBarCollapsed: false,
-        }
+        };
+        this.toggleSidebar = this.toggleSidebar.bind(this);
     }
 
     toggleSidebar() {
+
         this.setState({sideBarCollapsed: !this.state.sideBarCollapsed})
     }
 
@@ -57,33 +140,17 @@ class App extends React.Component {
         return (
             <ApolloProvider client={GraphQLClient}>
                 <LevelManager>
-                    <Layout>
-                        <Sider trigger={null} collapsible collapsed={this.state.collapsed}>
-                            <div className="logo"/>
-                            <Menu theme="dark" mode="inline" defaultSelectedKeys={['1']}>
-                                <Menu.Item key="1">
-                                    <Icon type="user"/>
-                                    <span>nav 1</span>
-                                </Menu.Item>
-                                <Menu.Item key="2">
-                                    <Icon type="video-camera"/>
-                                    <span>nav 2</span>
-                                </Menu.Item>
-                                <Menu.Item key="3">
-                                    <Icon type="upload"/>
-                                    <span>nav 3</span>
-                                </Menu.Item>
-                            </Menu>
-                        </Sider>
-                        <Header style={{background: '#fff', padding: 0}}>
+                    <div id='page'>
+                        <Header style={{background: '#fff'}} className='header'>
                             <Icon
-                                className="trigger"
-                                type={this.state.collapsed ? 'menu-unfold' : 'menu-fold'}
-                                onClick={this.toggle}
+                                className="sideBarTrigger"
+                                type={this.state.sideBarCollapsed ? 'menu-unfold' : 'menu-fold'}
+                                onClick={this.toggleSidebar}
                             />
                         </Header>
-                        <Content style={{height: '100%'}}>
-                            <Card style={{margin: '20px'}}>
+                        <div className='content'>
+                            <SlidingText/>
+                            <Card className='card'>
                                 <GetRoles children={({roles, status}) => {
                                     let loggedIn = false;
                                     if (roles.includes('MEMBER'))
@@ -107,26 +174,30 @@ class App extends React.Component {
 
                                 <Route path="/login" render={() => <AuthApi.LoginComponent/>}/>
                                 <LevelCheck level={AuthLevel.MEMBER}>
-                                    <Profile/>
-                                    <Row>
-                                        <Paragraph style={{fontSize: '24px'}}>
-                                            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod
-                                            tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
-                                            veniam,
-                                            quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo
-                                            consequat. Duis aute irure dolor in reprehenderit in voluptate velit
-                                            esse
-                                            cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat
-                                            cupidatat
-                                            non proident, sunt in culpa qui officia deserunt mollit anim id est
-                                            laborum.
-                                        </Paragraph>
-                                    </Row>
+                                    <div>
+                                        <Profile/>
+                                        <Row>
+                                            <Paragraph style={{fontSize: '24px'}}>
+                                                Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+                                                eiusmod
+                                                tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
+                                                veniam,
+                                                quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+                                                commodo
+                                                consequat. Duis aute irure dolor in reprehenderit in voluptate velit
+                                                esse
+                                                cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat
+                                                cupidatat
+                                                non proident, sunt in culpa qui officia deserunt mollit anim id est
+                                                laborum.
+                                            </Paragraph>
+                                        </Row>
+                                    </div>
                                 </LevelCheck>
                             </Card>
-                        </Content>
 
-                    </Layout>
+                        </div>
+                    </div>
                 </LevelManager>
             </ApolloProvider>
         );
