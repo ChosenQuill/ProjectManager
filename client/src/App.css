@@ -27,13 +27,27 @@
     background-repeat: repeat;
     background-color: rgba(0, 0, 0, .08) !important;
     height: 100%;
+
 }
 
 .particles {
-    display:block;
-    position: fixed;
-    height: 100vh;
+    position: absolute;
+    height: 90vh;
     width: 100vw;
+}
+
+.slidingText{
+    height: 90vh;
+    width: 100vw;
+    max-width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+}
+
+.card {
+    margin: 20px;
 }
 
 /*Global StyleSheet*/
