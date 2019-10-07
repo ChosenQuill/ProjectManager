@@ -30,39 +30,6 @@
 
 }
 
-.particles {
-    position: absolute;
-    height: 90vh;
-    width: 100vw;
-}
-
-.slidingText {
-    height: 90vh;
-    width: 100vw;
-    max-width: 100%;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    pointer-events: none;
-
-    .text {
-        font-size: 3vw;
-        font-family: IBM Plex Sans, sans-serif;
-        width: 40vw;
-        text-align: left;
-        transform: translate(15%,5%);
-        margin: 0;
-    }
-}
-
-.card {
-    margin: 20px;
-}
-
-.downtest {
-    display: flex;
-    flex-direction: row;
-}
 
 /*Global StyleSheet*/
 
