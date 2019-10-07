@@ -137,8 +137,11 @@ export function LevelManager(props){
     }
 
     if(error && !errorDisplayed){
-        console.log(error.message);
-        message.error("There was an error authenticating you.",10);
+        console.log("DataConnection Error: " + error);
+        if(error.message == "Network error: Failed to fetch")
+            message.error("There was an issue connecting you to our servers.",10);
+        else
+            message.error("There was an error authenticating you.",10);
         setErrorDisplayed(true);
     } else if (errorDisplayed && !error){
         setErrorDisplayed(false);
