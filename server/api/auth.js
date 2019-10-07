@@ -59,7 +59,7 @@ async function authenticate(access_token, res) {
         res.status(200).redirect(SITE_LOC + 'login?token=' + jwt);
     }
     else
-        throw new Error('Unauthorized')
+        throw new Error('Unauthorized');
 }
 
 router.get('/validate',catchAsync(async (req,res)=> {
