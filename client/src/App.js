@@ -13,6 +13,7 @@ import {motion, useAnimation} from 'framer-motion';
 import {AuthApi, AuthLevel, GetRoles, GraphQLClient, LevelCheck, LevelManager} from './Auth';
 import Loading from "./Components/Loading";
 import ParticleBackground from './Components/ParticleBackground'
+import DownAnim from './Components/DownAnim';
 
 const {Paragraph, Title, Text} = Typography;
 const {Header, Content, Footer, Sider} = Layout;
@@ -148,6 +149,7 @@ class App extends React.Component {
                     <Content id='content'>
                         <ParticleBackground/>
                         <SlidingText/>
+                        <DownAnim/>
                         <Card className='card'>
                             <GetRoles children={({roles, status}) => {
                                 let loggedIn = false;
