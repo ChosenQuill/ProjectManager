@@ -1,9 +1,75 @@
-body > #root > div {
-  height: 100vh;
-}
-.layout {
-  position: absolute;
-  height:100%;
-  width:100%;
+@import url('https://fonts.googleapis.com/css?family=IBM+Plex+Sans:500&display=swap');
+
+.header {
+    background-color: #fff;
+    /*position: sticky;*/
 }
 
+.logo {
+    display: flex;
+    align-items: center;
+    height: 100%;
+    color: inherit;
+}
+
+.logo:hover {
+    color: inherit;
+}
+
+.logoText {
+    margin-left: 20px;
+    font: 230% BEYNO;
+    margin-top: -6px;
+}
+
+#content {
+    background-image: url('./cubes.png');
+    background-repeat: repeat;
+    background-color: rgba(0, 0, 0, .08) !important;
+    height: 100%;
+
+}
+
+.particles {
+    position: absolute;
+    height: 90vh;
+    width: 100vw;
+}
+
+.slidingText{
+    height: 90vh;
+    width: 100vw;
+    max-width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    pointer-events: none;
+}
+
+.card {
+    margin: 20px;
+}
+
+/*Global StyleSheet*/
+
+.link{
+    position: relative;
+}
+
+.link:after{
+    content: '';
+    position: absolute;
+    width: 0; height: 2px;
+    display: block;
+    margin-top: 5px;
+    right: 0;
+    background: rgba(0, 0, 0, .6);
+    transition: width .2s ease;
+    -webkit-transition: width .2s ease;
+}
+
+.link:hover:after{
+    width: 100%;
+    left: 0;
+    background: rgba(0, 0, 0, .6);
+}
