@@ -44,6 +44,15 @@
     justify-content: center;
     align-items: center;
     pointer-events: none;
+
+    .text {
+        font-size: 3vw;
+        font-family: IBM Plex Sans, sans-serif;
+        width: 40vw;
+        text-align: left;
+        transform: translate(15%,5%);
+        margin: 0;
+    }
 }
 
 .card {

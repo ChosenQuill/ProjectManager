@@ -1,5 +1,5 @@
 import React, {useEffect, useRef, useState} from 'react';
-import './App.css';
+import './App.scss';
 import './Normalize.css';
 
 import logo from './logo.png';
@@ -9,6 +9,7 @@ import {Route, withRouter} from "react-router-dom";
 import {ApolloProvider, useQuery} from '@apollo/react-hooks';
 import {gql} from 'apollo-boost';
 import {motion, useAnimation} from 'framer-motion';
+import { useMediaQuery } from 'react-responsive'
 
 import {AuthApi, AuthLevel, GetRoles, GraphQLClient, LevelCheck, LevelManager} from './Auth';
 import Loading from "./Components/Loading";
@@ -101,14 +102,7 @@ function SlidingText(props) {
 
     return (
         <div className='slidingText'>
-            <div style={{
-                fontSize: '3vw',
-                fontFamily: '\'IBM Plex Sans\', sans-serif',
-                width: '40vw',
-                textAlign: 'left',
-                transform: 'translate(15%,5%)',
-                margin: 0
-            }}>
+            <div className='text'>
                 <div>
                     Hi, my name is Rithvik.
                 </div>
