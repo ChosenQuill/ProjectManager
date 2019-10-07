@@ -99,7 +99,7 @@ function SlidingText(props) {
     }, []);
 
     return (
-        <div style={{height: '80vh', width: '100vw', display: 'flex', justifyContent: 'center', alignItems: 'center', pointerEvents: 'none'}}>
+        <div className='slidingText'>
             <div style={{
                 fontSize: '3vw',
                 fontFamily: '\'IBM Plex Sans\', sans-serif',
@@ -147,6 +147,7 @@ class App extends React.Component {
                     <Content id='content'>
                         <ParticleBackground/>
                         <SlidingText/>
+
                     </Content>
                 </LevelManager>
             </ApolloProvider>
