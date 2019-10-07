@@ -10,17 +10,22 @@ const CLIENT_ID = process.env.CLIENT_ID;
 const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const SITE_LOC = process.env.SITE_LOC;
 
-const redirect = encodeURIComponent('http://localhost:5000/api/auth/callback');
 
+const redirect = encodeURIComponent('http://localhost:5000/api/auth/callback');
 
 // Router
 
 router.get('/login', (req, res) => {
+    if(req.params.redirect)
+        res.cookie('redirect',req.params.redirect, {httpOnly: true});
+    else if (req.cookies.redirect)
+        res.clearCookie('redirect');
     res.redirect(`https://discordapp.com/api/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${redirect}&response_type=code&scope=identify`);
 });
 
 router.get('/callback', catchAsync(async (req, res) => {
     if (!req.query.code) throw new Error('NoCodeProvided');
+
     const code = req.query.code;
     const creds = btoa(`${CLIENT_ID}:${CLIENT_SECRET}`);
     const response = await fetch(`https://discordapp.com/api/oauth2/token?grant_type=authorization_code&code=${code}&redirect_uri=${redirect}`,
@@ -56,7 +61,7 @@ async function authenticate(access_token, res) {
     if(identity.id) {
         let jwt = token.encrypt({id: identity.id, name: identity.username, avatar: identity.avatar});
         console.log("JWT Token: " + jwt);
-        res.status(200).redirect(SITE_LOC + 'login?token=' + jwt);
+        res.status(200).redirect(SITE_LOC + 'login?token=' + jwt + res.cookies.redirect ? ('redirect?=' + req.cookies.redirect) : '');
     }
     else
         throw new Error('Unauthorized');

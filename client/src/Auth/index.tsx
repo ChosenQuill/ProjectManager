@@ -65,6 +65,7 @@ class Api {
 
     private LoginComponentFunc(location,history){
         let query = queryString.parse(location.search);
+        console.log(query.redirect);
         if(query.token){
             this.setToken(query.token, true);
             history.push('/');
