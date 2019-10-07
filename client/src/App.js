@@ -136,6 +136,7 @@ class App extends React.Component {
         return (
             <ApolloProvider client={GraphQLClient}>
                 <LevelManager>
+                    <Route path="/login" render={() => <AuthApi.LoginComponent/>}/>
                     <Header className='header'>
                         <a className='logo' href='https://www.suredroid.com'>
                             <img src={logo} style={{height: '65%'}}/>
@@ -147,7 +148,49 @@ class App extends React.Component {
                     <Content id='content'>
                         <ParticleBackground/>
                         <SlidingText/>
+                        <Card className='card'>
+                            <GetRoles children={({roles, status}) => {
+                                let loggedIn = false;
+                                if (roles.includes('MEMBER'))
+                                    loggedIn = true;
+                                return (
+                                    <div>
+                                        <Title level={4} type={"secondary"}>
+                                            Logged In: {loggedIn ? 'True' : 'False'} | Auth Status: {status}
+                                        </Title>
+                                        {
+                                            loggedIn ?
+                                                <Button onClick={() => AuthApi.logout()} type='primary'>Log
+                                                    Out</Button> :
+                                                <Button type='primary' onClick={() => AuthApi.login()}>Log
+                                                    In</Button>
+                                        }
+                                    </div>
 
+                                )
+                            }}/>
+                            <LevelCheck level={AuthLevel.MEMBER}>
+                                <div>
+                                    <Profile/>
+                                    <Row>
+                                        <Paragraph style={{fontSize: '24px'}}>
+                                            Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
+                                            eiusmod
+                                            tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
+                                            veniam,
+                                            quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
+                                            commodo
+                                            consequat. Duis aute irure dolor in reprehenderit in voluptate velit
+                                            esse
+                                            cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat
+                                            cupidatat
+                                            non proident, sunt in culpa qui officia deserunt mollit anim id est
+                                            laborum.
+                                        </Paragraph>
+                                    </Row>
+                                </div>
+                            </LevelCheck>
+                        </Card>
                     </Content>
                 </LevelManager>
             </ApolloProvider>
