@@ -44,10 +44,10 @@ router.get('/callback', catchAsync(async (req, res) => {
         else
             throw new Error("Internal Server Error");
 
-    let result = await authenticate(json.access_token,res);
+    let result = await authenticate(json.access_token,req.params.redirectTo,res);
 }));
 
-async function authenticate(access_token, res) {
+async function authenticate(access_token, redirectTo, res) {
     let response = await fetch(`https://discordapp.com/api/users/@me`,
         {
            method: 'GET',
@@ -58,6 +58,7 @@ async function authenticate(access_token, res) {
     let identity = await response.json();
 
     console.log("Identity: " + JSON.stringify(identity));
+    console.log(redirectTo);
     if(identity.id) {
         let jwt = token.encrypt({id: identity.id, name: identity.username, avatar: identity.avatar});
         console.log("JWT Token: " + jwt);
