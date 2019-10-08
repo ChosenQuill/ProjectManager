@@ -67,7 +67,9 @@ class Api {
         let query = queryString.parse(location.search);
         if(query.token){
             this.setToken(query.token, true);
-            history.push('/');
+            history.push(query.redirect);
+        } else {
+            this.login();
         }
 
         return (
@@ -76,7 +78,7 @@ class Api {
     }
 
     login() {
-        window.open(this.baseUrl + "/api/auth/login","_self");
+        window.open(this.baseUrl + "/api/auth/login?redirect=" + history.location.pathname,"_self");
     }
 
     logout(){
@@ -174,10 +176,6 @@ export function LevelCheck(props) {
                 </Row>
             );
     }}/>;
-
-
-
-
 }
 
 LevelCheck.context = RolesContext;
