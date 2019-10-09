@@ -45,6 +45,17 @@ function updateProject(name: string, project: ProjectData): Status {
     return new Status(true);
 }
 
+function renameProject(oldName: string,newName: string): Status {
+    if (!ProjectList[oldName]) {
+        return new Status(false, "Project does not exist, please try a different name.");
+    }
+    if (ProjectList[newName]) {
+        return new Status(false, "Project is already created. Try a different name.");
+    }
+    ProjectList[newName] = ProjectList[oldName];
+    delete ProjectList[oldName];
+}
+
 function writeUpdate(){
     fs.writeFileSync('projectList.json',JSON.stringify(ProjectList));
 }
@@ -85,5 +96,6 @@ module.exports = {
     createProject,
     deleteProject,
     updateProject,
+    renameProject,
     projectArray
 };
