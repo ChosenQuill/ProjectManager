@@ -39,6 +39,7 @@ const typeDefs = gql`
     }
 
     type ProjectOps {
+        rename(name : String) : Status!
         create(data : ProjectInput) : Status!
         update(data : ProjectInput) : Status!
         remove : Status!
@@ -93,6 +94,9 @@ const resolvers = {
         },
         update: (parent, args, context) =>{
             return updateProject(parent.name, new ProjectData(args.data.description));
+        },
+        rename: (parent, args, context) =>{
+            return renameProject(parent.name, args.name);
         }
     },
     ProjectData: (parent, args, context) =>{

@@ -1,13 +1,13 @@
 import {gql} from "apollo-boost";
 import {useQuery} from "@apollo/react-hooks";
 import React, {useEffect, useRef, useState} from "react";
-import Loading from "./Components/Loading";
+import Loading from "../Components/Loading";
 import {Button, Card, message, Row, Typography} from "antd";
 import {motion, useAnimation} from "framer-motion";
 
-import ParticleBackground from "./Components/ParticleBackground";
-import DownAnim from "./Components/DownAnim";
-import {AuthApi, AuthLevel, GetRoles, LevelCheck} from "./Auth";
+import ParticleBackground from "../Components/ParticleBackground";
+import DownAnim from "../Components/DownAnim";
+import {AuthApi, AuthLevel, GetRoles, LevelCheck} from "../Auth";
 
 import './ProjectDisplay.scss';
 

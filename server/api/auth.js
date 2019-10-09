@@ -3,6 +3,7 @@ const fetch = require('node-fetch');
 const btoa = require('btoa');
 const { catchAsync } = require('../utils');
 const token = require('./token');
+const cookieParser = require('cookie-parser');
 
 const router = express.Router();
 
@@ -15,10 +16,14 @@ const redirect = encodeURIComponent('http://localhost:5000/api/auth/callback');
 
 // Router
 
+router.use(cookieParser());
+
 router.get('/login', (req, res) => {
-    if(req.params.redirect)
-        res.cookie('redirect',req.params.redirect, {httpOnly: true});
-    else if (req.cookies.redirect)
+    console.log(req.query);
+    if(req.query.redirect)
+        res.cookie('redirect',req.query.redirect, {httpOnly: true});
+
+else if (req.cookies.redirect)
         res.clearCookie('redirect');
     res.redirect(`https://discordapp.com/api/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${redirect}&response_type=code&scope=identify`);
 });
@@ -44,10 +49,10 @@ router.get('/callback', catchAsync(async (req, res) => {
         else
             throw new Error("Internal Server Error");
 
-    let result = await authenticate(json.access_token,req.params.redirectTo,res);
+    let result = await authenticate(json.access_token,req,res);
 }));
 
-async function authenticate(access_token, redirectTo, res) {
+async function authenticate(access_token, req,res) {
     let response = await fetch(`https://discordapp.com/api/users/@me`,
         {
            method: 'GET',
@@ -57,12 +62,12 @@ async function authenticate(access_token, redirectTo, res) {
         });
     let identity = await response.json();
 
-    console.log("Identity: " + JSON.stringify(identity));
-    console.log(redirectTo);
+    // console.log("Identity: " + JSON.stringify(identity));
     if(identity.id) {
         let jwt = token.encrypt({id: identity.id, name: identity.username, avatar: identity.avatar});
         console.log("JWT Token: " + jwt);
-        res.status(200).redirect(SITE_LOC + 'login?token=' + jwt + res.cookies.redirect ? ('redirect?=' + req.cookies.redirect) : '');
+        console.log('Cookies: ' + JSON.stringify(req.cookies));
+        res.status(200).redirect(SITE_LOC + 'login?token=' + jwt + (req.cookies.redirect  ? ('&redirect=' + req.cookies.redirect) : ''));
     }
     else
         throw new Error('Unauthorized');
