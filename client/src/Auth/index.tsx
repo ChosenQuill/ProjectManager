@@ -67,7 +67,9 @@ class Api {
         let query = queryString.parse(location.search);
         if(query.token){
             this.setToken(query.token, true);
-            history.push('/');
+            history.push(query.redirect);
+        } else {
+            this.login();
         }
 
         return (
@@ -76,7 +78,7 @@ class Api {
     }
 
     login() {
-        window.open(this.baseUrl + "/api/auth/login","_self");
+        window.open(this.baseUrl + "/api/auth/login?redirect=" + history.location.pathname,"_self");
     }
 
     logout(){
@@ -137,8 +139,11 @@ export function LevelManager(props){
     }
 
     if(error && !errorDisplayed){
-        console.log(error.message);
-        message.error("There was an error authenticating you.",10);
+        console.log("DataConnection Error: " + error);
+        if(error.message == "Network error: Failed to fetch")
+            message.error("There was an issue connecting you to our servers.",10);
+        else
+            message.error("There was an error authenticating you.",10);
         setErrorDisplayed(true);
     } else if (errorDisplayed && !error){
         setErrorDisplayed(false);
@@ -171,10 +176,6 @@ export function LevelCheck(props) {
                 </Row>
             );
     }}/>;
-
-
-
-
 }
 
 LevelCheck.context = RolesContext;
