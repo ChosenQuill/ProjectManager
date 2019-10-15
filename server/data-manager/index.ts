@@ -1,65 +1,65 @@
-const fs = require('fs');
+import {Collection} from "mongodb";
 
-let ProjectList = {};
-let ProjectArray = {};
-let changeMade : boolean = true;
+const slugify = require('slugify');
+const dbm = require('../database');
 
-try {
-    if (fs.existsSync('projectList.json')) {
-        ProjectList = JSON.parse(fs.readFileSync('projectList.json'));
-        projectArray();
-    } else {
-        writeUpdate();
-    }
-} catch (e) {
-    console.log("Error Creating ProjectList: ", e);
+
+
+let projects : Collection;
+dbm.connect((err,db)=>{
+    projects = db.collection('projects');
+});
+
+
+async function hasProject(name: string) {
+    return await projects.countDocuments({name}, {limit: 1}) == 1;
 }
 
-function createProject(name: string, project: ProjectData): Status {
-    if (ProjectList[name]) {
+async function createProject(name: string, project: ProjectData): Promise<Status> {
+    if (await hasProject(name)) {
         return new Status(false, "Project is already created. Try a different name.");
     }
-    ProjectList[name] = project;
-    changeMade = true;
-    writeUpdate();
+    await projects.insertOne({
+        name,
+        ...project,
+        visible: project.visible
+    });
     return new Status(true);
 }
 
-function deleteProject(name: string): Status {
-    
-    if (!ProjectList[name]) {
+async function deleteProject(name: string): Promise<Status> {
+    if (await hasProject(name)) {
         return new Status(false, "Project does not exist, please try a different name.");
     }
-    delete ProjectList[name];
-    changeMade = true;
-    writeUpdate();
+    await projects.deleteOne({name});
     return new Status(true);
 }
 
-function updateProject(name: string, project: ProjectData): Status {
-    if (!ProjectList[name]) {
+async function updateProject(name: string, project: ProjectData): Promise<Status> {
+    if (await hasProject(name)) {
         return new Status(false, "Project does not exist, please try a different name.");
     }
-    ProjectList[name] = project;
-    changeMade = true;
-    writeUpdate();
+    await projects.updateOne({name},{name,...project});
     return new Status(true);
 }
 
-function renameProject(oldName: string,newName: string): Status {
-    if (!ProjectList[oldName]) {
+async function renameProject(oldName: string,newName: string): Promise<Status> {
+    if (!await hasProject(name)) {
         return new Status(false, "Project does not exist, please try a different name.");
     }
-    if (ProjectList[newName]) {
+    if (await hasProject(newName)) {
         return new Status(false, "Project is already created. Try a different name.");
     }
-    ProjectList[newName] = ProjectList[oldName];
-    delete ProjectList[oldName];
+    await projects.updateOne({name},{name: newName});
 }
 
-function writeUpdate(){
-    fs.writeFileSync('projectList.json',JSON.stringify(ProjectList));
+async function getProjects(seeHidden: boolean){
+    if(!seeHidden)
+        return projects.find({visible: true}).toArray();
+    else
+        return projects.find().toArray();
 }
+
 
 class Status {
     completed: boolean;
@@ -73,30 +73,24 @@ class Status {
 }
 
 class ProjectData {
-    description: String;
-    constructor(description?: String) {
-        this.description = description;
+    constructor(obj) {
+        Object.assign(this, obj);
+        if(!this.slug){
+            this.slug = slugify(this.name);
+        }
     }
+    name: string;
+    description: string;
+    slug: string;
+    visible: boolean = true;
 }
 
-
-function projectArray(){
-    if(changeMade){
-        ProjectArray = Object.keys(ProjectList).map((key)=>{
-            console.log({name: key,...ProjectList[key]});
-            return {name: key,...ProjectList[key]}
-        });
-        changeMade = false;
-    }
-    return ProjectArray
-}
 
 module.exports = {
     ProjectData,
-    ProjectList,
+    getProjects,
     createProject,
     deleteProject,
     updateProject,
     renameProject,
-    projectArray
 };
