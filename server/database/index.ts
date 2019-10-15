@@ -1,3 +1,5 @@
+import {Db} from "mongodb";
+
 const MongoClient = require('mongodb').MongoClient;
 
 const url = 'mongodb://localhost:27017';
@@ -11,21 +13,24 @@ const client = new MongoClient(url, {
     useUnifiedTopology: true
 });
 
-let db : IDBDatabase;
-const connect = (callback: (err: Error, db: IDBDatabase) => any) => client.connect((err) => {
+let db : Db;
+const connect = (callback?: (err: Error, db) => any) => client.connect((err) => {
     if(err){
        console.log("Error connecting to the database: " + err);
-       callback(err,null);
+       if(callback)
+           callback(err,null);
     } else {
         console.log("Connected successfully to server");
         db = client.db(dbName);
-        callback(null,db);
+        if(callback)
+            callback(null,db);
     }
 });
+
 
 module.exports = {
     client : MongoClient,
     getDB: () => db,
     connect,
-    isConnected: () => client && client.topology && client.topology.isConnected,
+    isConnected: () => !!client && !!client.topology && client.topology.isConnected(),
 };

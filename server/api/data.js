@@ -1,20 +1,12 @@
+const dbm = require('../database');
+
 const { ApolloServer, gql } = require('apollo-server-express');
 const {buildSchema} = require('graphql');
 const token = require('./token');
-const {ProjectList, createProject, deleteProject, updateProject, projectArray, ProjectData} = require('../data-manager');
-const db = require('../database');
+const {getProjects, createProject, deleteProject, updateProject, projectArray, ProjectData, renameProject} = require('../data-manager');
 
-db.connect((err,db)=>{
-});
 
 const typeDefs = gql`
-    # Comments in GraphQL strings (such as this one) start with the hash (#) symbol.
-
-    # This "Book" type defines the queryable fields for every book in our data source.
-    type Book {
-        title: String
-        author: String
-    }
 
     type Status {
         completed: Boolean!
@@ -35,12 +27,15 @@ const typeDefs = gql`
 
     input ProjectInput {
         description: String
+        slug: String
+        visible: Boolean
     }
 
     type ProjectData {
-        name: String
+        name: String!
         description: String
-        slug: String
+        slug: String!
+        visible: Boolean!
     }
 
     type ProjectOps {
@@ -60,14 +55,14 @@ const typeDefs = gql`
 
 
     type Mutation {
-        Project(name: String) : ProjectOps
+        Project(name: String!) : ProjectOps
     }
 `;
 
 const resolvers = {
     Mutation: {
         Project: (parent, args, context) =>{
-            if(!context.user.roles.includes('ADMIN') || !db.isConnected()){
+            if(!context.user.roles.includes('ADMIN') || !dbm.isConnected()){
                 return null;
             }
             return ({name: args.name});
@@ -79,9 +74,9 @@ const resolvers = {
             return context.user;
         },
         projects: (parent,args,context)=> {
-            if(!db.isConnected())
+            if(!dbm.isConnected())
                 return null;
-            return projectArray();
+            return getProjects(context.user.roles.includes('ADMIN'));
         },
     },
     User: {
@@ -94,13 +89,13 @@ const resolvers = {
     },
     ProjectOps: {
         create: (parent, args, context) => {
-            return createProject(parent.name, new ProjectData(args.data.description));
+            return createProject(parent.name, new ProjectData({name: parent.name,...args.data}));
         },
         remove: (parent, args, context) => {
             return deleteProject(parent.name);
         },
         update: (parent, args, context) =>{
-            return updateProject(parent.name, new ProjectData(args.data.description));
+            return updateProject(parent.name, new ProjectData({name: parent.name,...args.data}));
         },
         rename: (parent, args, context) =>{
             return renameProject(parent.name, args.name);

@@ -101,7 +101,7 @@ function Projects() {
 }
 
 const ADD_PROJ = gql`
-    mutation createProj($data: ProjectInput, $name: String){
+    mutation createProj($data: ProjectInput, $name: String!){
         Project(name: $name){
             create(data: $data){
                 message
@@ -155,7 +155,7 @@ function CreateProject() {
 }
 
 const DELETE_PROJ = gql`
-    mutation deleteProj($name: String){
+    mutation deleteProj($name: String!){
         Project(name: $name){
             remove {
                 message
