@@ -26,6 +26,7 @@ function createProject(name: string, project: ProjectData): Status {
 }
 
 function deleteProject(name: string): Status {
+    
     if (!ProjectList[name]) {
         return new Status(false, "Project does not exist, please try a different name.");
     }
@@ -43,6 +44,17 @@ function updateProject(name: string, project: ProjectData): Status {
     changeMade = true;
     writeUpdate();
     return new Status(true);
+}
+
+function renameProject(oldName: string,newName: string): Status {
+    if (!ProjectList[oldName]) {
+        return new Status(false, "Project does not exist, please try a different name.");
+    }
+    if (ProjectList[newName]) {
+        return new Status(false, "Project is already created. Try a different name.");
+    }
+    ProjectList[newName] = ProjectList[oldName];
+    delete ProjectList[oldName];
 }
 
 function writeUpdate(){
@@ -85,5 +97,6 @@ module.exports = {
     createProject,
     deleteProject,
     updateProject,
+    renameProject,
     projectArray
 };
