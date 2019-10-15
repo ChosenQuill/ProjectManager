@@ -26,6 +26,7 @@ function createProject(name: string, project: ProjectData): Status {
 }
 
 function deleteProject(name: string): Status {
+    
     if (!ProjectList[name]) {
         return new Status(false, "Project does not exist, please try a different name.");
     }
