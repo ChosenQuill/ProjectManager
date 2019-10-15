@@ -15,20 +15,18 @@ async function hasProject(name: string) {
     return await projects.countDocuments({name}, {limit: 1}) == 1;
 }
 
-async function createProject(name: string, project: ProjectData): Promise<Status> {
+async function createProject(name: string): Promise<Status> {
     if (await hasProject(name)) {
         return new Status(false, "Project is already created. Try a different name.");
     }
     await projects.insertOne({
-        name,
-        ...project,
-        visible: project.visible
+        ...new ProjectData({name})
     });
     return new Status(true);
 }
 
 async function deleteProject(name: string): Promise<Status> {
-    if (await hasProject(name)) {
+    if (!await hasProject(name)) {
         return new Status(false, "Project does not exist, please try a different name.");
     }
     await projects.deleteOne({name});
@@ -60,6 +58,10 @@ async function getProjects(seeHidden: boolean){
         return projects.find().toArray();
 }
 
+async function getProject(slug: string, visible: boolean){
+    return projects.findOne({slug,visible});
+}
+
 
 class Status {
     completed: boolean;
@@ -82,7 +84,7 @@ class ProjectData {
     name: string;
     description: string;
     slug: string;
-    visible: boolean = true;
+    visible: boolean = false;
 }
 
 
@@ -93,4 +95,5 @@ module.exports = {
     deleteProject,
     updateProject,
     renameProject,
+    getProject,
 };

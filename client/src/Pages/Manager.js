@@ -1,7 +1,7 @@
 import React from "react";
 
 import {AuthLevel, LevelCheck} from "../Auth";
-import {Switch, Route, Redirect} from 'react-router-dom';
+import {Switch, Route, Redirect, useParams} from 'react-router-dom';
 import {Button, Card, Form, Input, List, message, PageHeader, Popconfirm, Typography} from "antd";
 import {gql} from 'apollo-boost';
 
@@ -19,15 +19,37 @@ function Manager() {
         <LevelCheck level={AuthLevel.ADMIN} redirect={true}>
             <Switch>
                 <Route exact path='/admin' component={Home}/>
-
+                <Route path='/admin/:slug' component={Edit}/>
                 <Route render={()=><Redirect to='/admin'/>}/>
             </Switch>
         </LevelCheck>
     );
 }
 
+const GET_PROJ = gql`
+    query getProj($slug: String!) {
+        project(slug: $slug) {
+            name
+            description
+            visible
+        }
+    }
+`
+
+function Edit(){
+    let { slug } = useParams();
+    const {loading, error, data} = useQuery(GET_PROJ,{variables: {slug}});
+
+    return (
+        <React.Fragment>
+            asdfsadf
+        </React.Fragment>
+    )
+}
+
+
 const GET_PROJS = gql`
-    query getProj {
+    query getProjs {
         projects {
             name
             description
@@ -43,7 +65,7 @@ function Projects() {
 
     const [deleteProj] = useMutation(DELETE_PROJ,
         {
-            refetchQueries: ['getProj']
+            refetchQueries: ['getProjs']
         });
 
     const deleteButton = (name) => {
@@ -76,9 +98,9 @@ function Projects() {
                     itemLayout="horizontal"
                     dataSource={data.projects}
                     renderItem={item => {
-
                         return (
                         <List.Item actions={[
+                            <Button type='primary' shape='circle' icon='edit' onClick={()=>history.push('admin/'+item.slug)}/>,
                             <Popconfirm onConfirm={() => deleteButton(item.name)}
                                         title='Are you sure you want to delete this project?'
                                         okText="Yes"
@@ -101,9 +123,9 @@ function Projects() {
 }
 
 const ADD_PROJ = gql`
-    mutation createProj($data: ProjectInput, $name: String!){
-        Project(name: $name){
-            create(data: $data){
+    mutation createProj($name: String!){
+        Project(name: $name) {
+            create{
                 message
                 completed
             }
@@ -112,24 +134,21 @@ const ADD_PROJ = gql`
 `;
 
 function CreateProject() {
-    let name, description;
+    let name;
 
     const [addProj] = useMutation(ADD_PROJ,
         {
-            refetchQueries: ['getProj']
+            refetchQueries: ['getProjs']
         });
 
     const onSubmit = () => {
         name.input.value = name.input.value.trim();
-        if (!name.input.value || !description.textAreaRef.value) {
+        if (!name.input.value) {
             message.error("Please fill all required fields");
         } else {
             addProj({
                 variables: {
                     name: name.input.value,
-                    data: {
-                        description: description.textAreaRef.value
-                    }
                 }
             }).then(value => {
                 const data = value.data;
@@ -146,7 +165,6 @@ function CreateProject() {
         <Card className='spaced'>
             <Paragraph strong>Create Project</Paragraph>
             <Input placeholder='Name' className='space' ref={(input) => name = input}/>
-            <Input.TextArea placeholder='Description' className='space' ref={(input) => description = input} rows={3}/>
             <Button type="primary" htmlType="submit" className='space' onClick={onSubmit}>
                 Submit
             </Button>
@@ -165,45 +183,6 @@ const DELETE_PROJ = gql`
     }
 `;
 
-
-function DeleteProject() {
-    let name;
-
-    const [deleteProj] = useMutation(DELETE_PROJ,
-        {
-            refetchQueries: ['getProj']
-        });
-
-    const onSubmit = () => {
-        if (!name) {
-            message.error("Please fill all required fields");
-        } else {
-            deleteProj({
-                variables: {
-                    name: name.input.value,
-                }
-            }).then(value => {
-                const result = value.data.Project.remove;
-                if (result.completed)
-                    message.success('Project has been deleted!');
-                else
-                    message.error(result.message);
-            });
-        }
-    };
-
-
-    return (
-        <Card className='spaced'>
-            <Paragraph strong>Delete Project</Paragraph>
-            <Input placeholder='Name' className='space' ref={(input) => name = input}/>
-            <Button type="primary" htmlType="submit" className='space' onClick={onSubmit}>
-                Submit
-            </Button>
-        </Card>
-    );
-}
-
 function Home() {
 
     return (
@@ -213,8 +192,6 @@ function Home() {
                     <Projects/>
                     <br/>
                     <CreateProject/>
-                    <br/>
-                    <DeleteProject/>
                 </PageHeader>
             </Card>
         </React.Fragment>

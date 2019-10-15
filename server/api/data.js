@@ -3,7 +3,7 @@ const dbm = require('../database');
 const { ApolloServer, gql } = require('apollo-server-express');
 const {buildSchema} = require('graphql');
 const token = require('./token');
-const {getProjects, createProject, deleteProject, updateProject, projectArray, ProjectData, renameProject} = require('../data-manager');
+const {getProject, getProjects, createProject, deleteProject, updateProject, projectArray, ProjectData, renameProject} = require('../data-manager');
 
 
 const typeDefs = gql`
@@ -39,9 +39,9 @@ const typeDefs = gql`
     }
 
     type ProjectOps {
-        rename(name : String) : Status!
-        create(data : ProjectInput) : Status!
-        update(data : ProjectInput) : Status!
+        rename(name : String!) : Status!
+        create : Status!
+        update(data : ProjectInput!) : Status!
         remove : Status!
     }
 
@@ -51,6 +51,7 @@ const typeDefs = gql`
     type Query {
         me: User!
         projects: [ProjectData!]!
+        project(slug: String!) : ProjectData!
     }
 
 
@@ -78,6 +79,9 @@ const resolvers = {
                 return null;
             return getProjects(context.user.roles.includes('ADMIN'));
         },
+        project: (parent, args, context) =>{
+            return getProject(args.name,context.user.roles.includes('ADMIN'))
+        }
     },
     User: {
         avatarUrl: (parent, args, context) => {
@@ -89,13 +93,13 @@ const resolvers = {
     },
     ProjectOps: {
         create: (parent, args, context) => {
-            return createProject(parent.name, new ProjectData({name: parent.name,...args.data}));
+            return createProject(parent.name);
         },
         remove: (parent, args, context) => {
             return deleteProject(parent.name);
         },
         update: (parent, args, context) =>{
-            return updateProject(parent.name, new ProjectData({name: parent.name,...args.data}));
+            return updateProject(parent.name, new ProjectData({...args.data}));
         },
         rename: (parent, args, context) =>{
             return renameProject(parent.name, args.name);
