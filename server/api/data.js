@@ -2,6 +2,10 @@ const { ApolloServer, gql } = require('apollo-server-express');
 const {buildSchema} = require('graphql');
 const token = require('./token');
 const {ProjectList, createProject, deleteProject, updateProject, projectArray, ProjectData} = require('../data-manager');
+const db = require('../database');
+
+db.connect((err,db)=>{
+});
 
 const typeDefs = gql`
     # Comments in GraphQL strings (such as this one) start with the hash (#) symbol.
@@ -36,6 +40,7 @@ const typeDefs = gql`
     type ProjectData {
         name: String
         description: String
+        slug: String
     }
 
     type ProjectOps {
@@ -62,7 +67,7 @@ const typeDefs = gql`
 const resolvers = {
     Mutation: {
         Project: (parent, args, context) =>{
-            if(!context.user.roles.includes('ADMIN')){
+            if(!context.user.roles.includes('ADMIN') || !db.isConnected()){
                 return null;
             }
             return ({name: args.name});
@@ -73,7 +78,9 @@ const resolvers = {
         me: (parent, args, context) =>{
             return context.user;
         },
-        projects: ()=> {
+        projects: (parent,args,context)=> {
+            if(!db.isConnected())
+                return null;
             return projectArray();
         },
     },
@@ -98,10 +105,6 @@ const resolvers = {
         rename: (parent, args, context) =>{
             return renameProject(parent.name, args.name);
         }
-    },
-    ProjectData: (parent, args, context) =>{
-        console.log(parent,args,context);
-        return null;
     }
 };
 

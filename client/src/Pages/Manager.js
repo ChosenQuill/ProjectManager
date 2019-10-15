@@ -10,6 +10,7 @@ import {useMutation, useQuery} from "@apollo/react-hooks";
 import Loading from "../Components/Loading";
 
 import './Manager.scss';
+import ReactMarkdown from "react-markdown";
 
 const {Title, Paragraph, Text} = Typography;
 
@@ -30,9 +31,12 @@ const GET_PROJS = gql`
         projects {
             name
             description
+            slug
         }
     }
 `;
+
+let trimRE = /^(.{0,80})(?: |$)/;
 
 function Projects() {
     const {loading, error, data} = useQuery(GET_PROJS);
@@ -71,7 +75,9 @@ function Projects() {
                     </Title>}
                     itemLayout="horizontal"
                     dataSource={data.projects}
-                    renderItem={item => (
+                    renderItem={item => {
+
+                        return (
                         <List.Item actions={[
                             <Popconfirm onConfirm={() => deleteButton(item.name)}
                                         title='Are you sure you want to delete this project?'
@@ -85,11 +91,9 @@ function Projects() {
                             <List.Item.Meta
                                 title={item.name}
                             />
-                            {item.description.split('\n').map((item, key) => {
-                                return <React.Fragment key={key}>{item}<br/></React.Fragment>
-                            })}
+                            <ReactMarkdown source={item.description} />
                         </List.Item>
-                    )}
+                    )}}
                 />
             </React.Fragment>
         )
@@ -116,6 +120,7 @@ function CreateProject() {
         });
 
     const onSubmit = () => {
+        name.input.value = name.input.value.trim();
         if (!name.input.value || !description.textAreaRef.value) {
             message.error("Please fill all required fields");
         } else {
