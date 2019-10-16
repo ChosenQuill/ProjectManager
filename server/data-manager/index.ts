@@ -58,8 +58,11 @@ async function getProjects(seeHidden: boolean){
         return projects.find().toArray();
 }
 
-async function getProject(slug: string, visible: boolean){
-    return projects.findOne({slug,visible});
+async function getProject(slug: string, isAuth: boolean){
+    let project = await projects.findOne({slug: slug});
+    if(!project || (!isAuth && !project.visible))
+        return null;
+    return project;
 }
 
 

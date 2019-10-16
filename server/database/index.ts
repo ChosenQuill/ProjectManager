@@ -27,7 +27,6 @@ const connect = (callback?: (err: Error, db) => any) => client.connect((err) => 
     }
 });
 
-
 module.exports = {
     client : MongoClient,
     getDB: () => db,
