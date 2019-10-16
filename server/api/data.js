@@ -51,7 +51,7 @@ const typeDefs = gql`
     type Query {
         me: User!
         projects: [ProjectData!]!
-        project(slug: String!) : ProjectData!
+        project(slug: String!) : ProjectData
     }
 
 
@@ -80,7 +80,9 @@ const resolvers = {
             return getProjects(context.user.roles.includes('ADMIN'));
         },
         project: (parent, args, context) =>{
-            return getProject(args.name,context.user.roles.includes('ADMIN'))
+            if(!dbm.isConnected())
+                return null;
+            return getProject(args.slug,context.user.roles.includes('ADMIN'))
         }
     },
     User: {

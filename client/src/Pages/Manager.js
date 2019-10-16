@@ -1,4 +1,4 @@
-import React from "react";
+import React, {useState} from "react";
 
 import {AuthLevel, LevelCheck} from "../Auth";
 import {Switch, Route, Redirect, useParams} from 'react-router-dom';
@@ -20,7 +20,7 @@ function Manager() {
             <Switch>
                 <Route exact path='/admin' component={Home}/>
                 <Route path='/admin/:slug' component={Edit}/>
-                <Route render={()=><Redirect to='/admin'/>}/>
+                <Route render={() => <Redirect to='/admin'/>}/>
             </Switch>
         </LevelCheck>
     );
@@ -30,21 +30,48 @@ const GET_PROJ = gql`
     query getProj($slug: String!) {
         project(slug: $slug) {
             name
+            slug
             description
             visible
         }
     }
 `
 
-function Edit(){
-    let { slug } = useParams();
-    const {loading, error, data} = useQuery(GET_PROJ,{variables: {slug}});
+function Edit() {
+    let {slug} = useParams();
+    const {loading, error, data} = useQuery(GET_PROJ, {variables: {slug}});
+    const [changesMade, setChanges] = useState(false);
 
-    return (
-        <React.Fragment>
-            asdfsadf
-        </React.Fragment>
-    )
+    if (loading)
+        return <Loading/>;
+    else if (error) {
+        message.error("There was an error finding your project.");
+        console.log(error);
+        return <Redirect to='/admin'/>;
+    } else {
+        if (!data.project) {
+            message.error('We could not find the project you selected.');
+            return <Redirect to={'/admin'}/>
+        }
+
+        const {project} = data;
+        if (project.slug !== slug)
+            return <Redirect to={'/admin/' + project.slug}/>;
+        return (
+            <Card className='card'>
+                <Title level={2} editable={{onChange:(text)=>{project.title = text; setChanges(true);}}}>
+                    {project.name}
+                </Title>
+                {
+                    changesMade &&
+                    <Button>
+                        Save Changes
+                    </Button>
+
+                }
+            </Card>
+        )
+    }
 }
 
 
@@ -99,23 +126,25 @@ function Projects() {
                     dataSource={data.projects}
                     renderItem={item => {
                         return (
-                        <List.Item actions={[
-                            <Button type='primary' shape='circle' icon='edit' onClick={()=>history.push('admin/'+item.slug)}/>,
-                            <Popconfirm onConfirm={() => deleteButton(item.name)}
-                                        title='Are you sure you want to delete this project?'
-                                        okText="Yes"
-                                        cancelText="No"
-                                        placement='topLeft'
-                            >
-                                <Button type='danger' shape='circle' icon='delete'/>
-                            </Popconfirm>
-                        ]}>
-                            <List.Item.Meta
-                                title={item.name}
-                            />
-                            <ReactMarkdown source={item.description} />
-                        </List.Item>
-                    )}}
+                            <List.Item actions={[
+                                <Button type='primary' shape='circle' icon='edit'
+                                        onClick={() => history.push('admin/' + item.slug)}/>,
+                                <Popconfirm onConfirm={() => deleteButton(item.name)}
+                                            title='Are you sure you want to delete this project?'
+                                            okText="Yes"
+                                            cancelText="No"
+                                            placement='topLeft'
+                                >
+                                    <Button type='danger' shape='circle' icon='delete'/>
+                                </Popconfirm>
+                            ]}>
+                                <List.Item.Meta
+                                    title={item.name}
+                                />
+                                <ReactMarkdown source={item.description}/>
+                            </List.Item>
+                        )
+                    }}
                 />
             </React.Fragment>
         )
