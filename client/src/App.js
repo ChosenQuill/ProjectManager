@@ -9,8 +9,8 @@ import {Route, withRouter, Switch, Redirect} from "react-router-dom";
 import {ApolloProvider} from '@apollo/react-hooks';
 
 import {AuthApi, GraphQLClient, LevelManager} from './Auth';
-import ProjectDisplay from './Pages/ProjectDisplay';
 import Manager from './Pages/Manager';
+import Intro from "./Pages/Intro";
 
 const {Paragraph, Title, Text} = Typography;
 const {Header, Content, Footer, Sider} = Layout;
@@ -24,7 +24,7 @@ class App extends React.Component {
     render() {
         return (
             <ApolloProvider client={GraphQLClient}>
-                <LevelManager>
+
                     <Header className='header'>
                         <a className='logo' href='https://www.suredroid.com'>
                             <img src={logo} style={{height: '65%'}}/>
@@ -33,15 +33,18 @@ class App extends React.Component {
                             </span>
                         </a>
                     </Header>
-                    <Content id='content'>
+                    <Layout>
                         <Switch>
-                            <Route path='/' exact component={ProjectDisplay}/>
-                            <Route path='/admin' component={Manager}/>
+                            <Route path='/' exact component={Intro}/>
+                            <Route path={['/home','/profile','/project','/billing']} component={Manager}/>
                             <Route path='/login' component={AuthApi.LoginComponent}/>
+
+                            {/*---- ToDo (Billing, Pricing) ----*/}
+                            <Route path='/pricing' />
+
                             <Route render={()=><Redirect to='/' />}/>
                         </Switch>
-                    </Content>
-                </LevelManager>
+                    </Layout>
             </ApolloProvider>
         );
     }

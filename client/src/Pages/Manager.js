@@ -1,8 +1,8 @@
 import React, {useState} from "react";
 
-import {AuthLevel, LevelCheck} from "../Auth";
+import {AuthLevel, LevelCheck, LevelManager} from "../Auth";
 import {Switch, Route, Redirect, useParams} from 'react-router-dom';
-import {Button, Card, Form, Input, List, message, PageHeader, Popconfirm, Typography} from "antd";
+import {Button, Card, Form, Input, List, message, PageHeader, Popconfirm, Typography, Menu, Layout, Icon} from "antd";
 import {gql} from 'apollo-boost';
 
 import history from '../History'
@@ -13,18 +13,84 @@ import './Manager.scss';
 import ReactMarkdown from "react-markdown";
 
 const {Title, Paragraph, Text} = Typography;
+const { SubMenu } = Menu;
+const { Header, Content, Footer, Sider } = Layout;
+
 
 function Manager() {
     return (
-        <LevelCheck level={AuthLevel.ADMIN} redirect={true}>
-            <Switch>
-                <Route exact path='/admin' component={Home}/>
-                <Route path='/admin/:slug' component={Edit}/>
-                <Route render={() => <Redirect to='/admin'/>}/>
-            </Switch>
-        </LevelCheck>
+        <LevelManager>
+            <LevelCheck level={AuthLevel.ADMIN} redirect={true}>
+                <ManagerSider />
+                <Content>
+                    <Switch>
+                        <Route exact path='/home' component={Home}/>
+                        <Route path='/home/:slug' component={Edit}/>
+                        <Route render={() => <Redirect to='/home'/>}/>
+                    </Switch>
+                </Content>
+
+            </LevelCheck>
+        </LevelManager>
     );
 }
+
+function ManagerSider(){
+    return (
+        <Sider width={200} style={{ background: '#' }}>
+            <Menu
+                mode="inline"
+                defaultSelectedKeys={['1']}
+                defaultOpenKeys={['sub1']}
+                style={{ height: '100%' }}
+            >
+                <SubMenu
+                    key="sub1"
+                    title={
+                        <span>
+                  <Icon type="user" />
+                  subnav 1
+                </span>
+                    }
+                >
+                    <Menu.Item key="1">option1</Menu.Item>
+                    <Menu.Item key="2">option2</Menu.Item>
+                    <Menu.Item key="3">option3</Menu.Item>
+                    <Menu.Item key="4">option4</Menu.Item>
+                </SubMenu>
+                <SubMenu
+                    key="sub2"
+                    title={
+                        <span>
+                  <Icon type="laptop" />
+                  subnav 2
+                </span>
+                    }
+                >
+                    <Menu.Item key="5">option5</Menu.Item>
+                    <Menu.Item key="6">option6</Menu.Item>
+                    <Menu.Item key="7">option7</Menu.Item>
+                    <Menu.Item key="8">option8</Menu.Item>
+                </SubMenu>
+                <SubMenu
+                    key="sub3"
+                    title={
+                        <span>
+                  <Icon type="notification" />
+                  subnav 3
+                </span>
+                    }
+                >
+                    <Menu.Item key="9">option9</Menu.Item>
+                    <Menu.Item key="10">option10</Menu.Item>
+                    <Menu.Item key="11">option11</Menu.Item>
+                    <Menu.Item key="12">option12</Menu.Item>
+                </SubMenu>
+            </Menu>
+        </Sider>
+    );
+}
+
 
 const GET_PROJ = gql`
     query getProj($slug: String!) {
@@ -47,16 +113,16 @@ function Edit() {
     else if (error) {
         message.error("There was an error finding your project.");
         console.log(error);
-        return <Redirect to='/admin'/>;
+        return <Redirect to='/home'/>;
     } else {
         if (!data.project) {
             message.error('We could not find the project you selected.');
-            return <Redirect to={'/admin'}/>
+            return <Redirect to={'/home'}/>
         }
 
         const {project} = data;
         if (project.slug !== slug)
-            return <Redirect to={'/admin/' + project.slug}/>;
+            return <Redirect to={'/home/' + project.slug}/>;
         return (
             <Card className='card'>
                 <Title level={2} editable={{onChange:(text)=>{project.title = text; setChanges(true);}}}>
@@ -67,7 +133,6 @@ function Edit() {
                     <Button>
                         Save Changes
                     </Button>
-
                 }
             </Card>
         )
@@ -217,7 +282,7 @@ function Home() {
     return (
         <React.Fragment>
             <Card className='card'>
-                <PageHeader onBack={() => history.push('/')} title="Home" subTitle="Main Admin Page">
+                <PageHeader title="Home" subTitle="Manage Projects Here">
                     <Projects/>
                     <br/>
                     <CreateProject/>
