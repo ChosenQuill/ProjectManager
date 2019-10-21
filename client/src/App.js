@@ -36,7 +36,7 @@ class App extends React.Component {
                     <Layout>
                         <Switch>
                             <Route path='/' exact component={Intro}/>
-                            <Route path={['/home','/profile','/project','/billing']} component={Manager}/>
+                            <Route path={['/home','/settings','/project','/billing']} component={Manager}/>
                             <Route path='/login' component={AuthApi.LoginComponent}/>
 
                             {/*---- ToDo (Billing, Pricing) ----*/}
