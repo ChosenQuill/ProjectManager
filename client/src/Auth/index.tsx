@@ -182,7 +182,7 @@ LevelCheck.context = RolesContext;
 
 LevelCheck.propTypes = {
     level: PropTypes.oneOf(Object.values(AuthLevel)).isRequired,
-    children: PropTypes.element.isRequired,
+    children: PropTypes.any.isRequired,
     NoPermission: PropTypes.element,
     redirect: PropTypes.bool,
 };
