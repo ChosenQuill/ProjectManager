@@ -46,7 +46,6 @@
     ]
   },
   "devDependencies": {
-    "babel-plugin-import": "^1.12.1",
-    "relay-config": "^6.0.0"
+    "babel-plugin-import": "^1.12.1"
   }
 }

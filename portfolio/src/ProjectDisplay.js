@@ -1,13 +1,12 @@
 import {gql} from "apollo-boost";
 import {useQuery} from "@apollo/react-hooks";
 import React, {useEffect, useRef, useState} from "react";
-import Loading from "../Components/Loading";
+import Loading from "./Components/Loading";
 import {Button, Card, message, Row, Typography} from "antd";
 import {motion, useAnimation} from "framer-motion";
 
-import ParticleBackground from "../Components/ParticleBackground";
-import DownAnim from "../Components/DownAnim";
-import {AuthApi, AuthLevel, GetRoles, LevelCheck} from "../Auth";
+import ParticleBackground from "./Components/ParticleBackground";
+import DownAnim from "./Components/DownAnim";
 
 import './ProjectDisplay.scss';
 
@@ -125,49 +124,6 @@ function ProjectDisplay(){
             <ParticleBackground/>
             <SlidingText/>
             <DownAnim/>
-            <Card className='card'>
-                <GetRoles children={({roles, status}) => {
-                    let loggedIn = false;
-                    if (roles.includes('MEMBER'))
-                        loggedIn = true;
-                    return (
-                        <div>
-                            <Title level={4} type={"secondary"}>
-                                Logged In: {loggedIn ? 'True' : 'False'} | Auth Status: {status}
-                            </Title>
-                            {
-                                loggedIn ?
-                                    <Button onClick={() => AuthApi.logout()} type='primary'>Log
-                                        Out</Button> :
-                                    <Button type='primary' onClick={() => AuthApi.login()}>Log
-                                        In</Button>
-                            }
-                        </div>
-
-                    )
-                }}/>
-                <LevelCheck level={AuthLevel.MEMBER}>
-                    <div>
-                        <Profile/>
-                        <Row>
-                            <Paragraph style={{fontSize: '24px'}}>
-                                Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do
-                                eiusmod
-                                tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim
-                                veniam,
-                                quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea
-                                commodo
-                                consequat. Duis aute irure dolor in reprehenderit in voluptate velit
-                                esse
-                                cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat
-                                cupidatat
-                                non proident, sunt in culpa qui officia deserunt mollit anim id est
-                                laborum.
-                            </Paragraph>
-                        </Row>
-                    </div>
-                </LevelCheck>
-            </Card>
         </React.Fragment>
     )
 }
