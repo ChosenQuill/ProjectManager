@@ -37,18 +37,19 @@ async function updateProject(name: string, project: ProjectData): Promise<Status
     if (await hasProject(name)) {
         return new Status(false, "Project does not exist, please try a different name.");
     }
-    await projects.updateOne({name},{name,...project});
+    await projects.updateOne({name},{$set: {name,...project}});
     return new Status(true);
 }
 
 async function renameProject(oldName: string,newName: string): Promise<Status> {
-    if (!await hasProject(name)) {
+    if (!await hasProject(oldName)) {
         return new Status(false, "Project does not exist, please try a different name.");
     }
     if (await hasProject(newName)) {
         return new Status(false, "Project is already created. Try a different name.");
     }
-    await projects.updateOne({name},{name: newName});
+    await projects.updateOne({name: oldName},{$set: {name: newName, slug: slugify(newName)}});
+    return new Status(true);
 }
 
 async function getProjects(seeHidden: boolean){

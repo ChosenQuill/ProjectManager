@@ -11,6 +11,7 @@ import Loading from "../Components/Loading";
 
 import './Manager.scss';
 import ReactMarkdown from "react-markdown";
+import slugify from "slugify";
 
 const {Title, Paragraph, Text} = Typography;
 const {SubMenu} = Menu;
@@ -74,7 +75,7 @@ function ManagerSider(props) {
                 style={{height: '100%'}}
                 onClick={param => {
                     if (param.key.startsWith('proj_')) {
-                        history.push('project/' + param.key.substr(5));
+                        history.push('/project/' + param.key.substr(5));
                     } else {
                         history.push('/' + param.key);
                     }
@@ -124,7 +125,6 @@ function ManagerSider(props) {
 
 function Projects() {
     const {loading, error, data} = useQuery(GET_PROJS);
-
 
     const [deleteProj] = useMutation(DELETE_PROJ,
         {
@@ -223,7 +223,8 @@ const RENAME_PROJ = gql`
 
 function Edit(props) {
     let {slug} = useParams();
-    const {loading, error, data} = useQuery(GET_PROJ, {variables: {slug}});
+    const {loading, error, data, refetch} = useQuery(GET_PROJ, {variables: {slug}});
+
     const [changesMade, setChanges] = useState(false);
     const [project, setProject] = useState({});
 
@@ -236,7 +237,11 @@ function Edit(props) {
 
     useEffect(() => {
         props.setSelected(['projects', 'proj_' + slug]);
-    }, []);
+        if(project && project.slug !== slug){
+            refetch().then(()=>setProject({}));
+        }
+    }, [slug]);
+
 
     const saveChanges = () => {
 
@@ -244,6 +249,8 @@ function Edit(props) {
     };
 
     const changeName = (newName) => {
+        if(project.name === newName)
+            return;
         renameProj({
             variables: {
                 name: project.name,
@@ -251,30 +258,35 @@ function Edit(props) {
             }
         }).then(value => {
             const data = value.data;
-            if (data.Project.create.completed) {
+            if (data.Project.rename.completed) {
                 message.success('Project has been renamed!');
-                history.push('/project/' + newName);
+                history.replace('/project/' + slugify(newName));
             } else
-                message.error(data.Project.create.message);
+                message.error(data.Project.rename.message);
+
         });
     };
 
     if (loading)
-        return <Loading/>;
+        return (
+            <Card className='card'>
+                <Loading />
+            </Card>
+        );
     else if (error) {
         message.error("There was an error finding your project.");
         console.log(error);
         return <Redirect to='/home'/>;
     } else {
-        if (!data.project) {
-            message.error('We could not find the project you selected.');
-            return <Redirect to={'/home'}/>
-        }
         if (Object.keys(project).length === 0) {
+            if (!data.project) {
+                message.error('We could not find the project you selected.');
+                return <Redirect to={'/home'}/>
+            } else
             setProject({...data.project});
         }
-        if (project.slug !== slug)
-            return <Redirect to={'/home/' + project.slug}/>;
+        // if (project.slug !== slug)
+        //     return <Redirect to={'/home/' + project.slug}/>;
         return (
             <Card className='card'>
                 <Title level={2} editable={{
@@ -282,8 +294,14 @@ function Edit(props) {
                 }}>
                     {project.name}
                 </Title>
+                <Input.TextArea defaultValue={project.description} onChange={event => {
+                    if(!changesMade)
+                        setChanges(true);
+
+                }}/>
+
                 {
-                    <Button type='primary' disabled={!changesMade} onClick={saveChanges}>
+                    <Button type='primary' disabled={!changesMade} onClick={saveChanges} style={{marginTop: '14px'}} >
                         Save Changes
                     </Button>
 

@@ -39,10 +39,10 @@ const typeDefs = gql`
     }
 
     type ProjectOps {
-        rename(name : String!) : Status!
         create : Status!
         update(data : ProjectInput!) : Status!
         remove : Status!
+        rename(name : String!) : Status!
     }
 
     # The "Query" type is special: it lists all of the available queries that
