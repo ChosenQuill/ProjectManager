@@ -7,21 +7,26 @@ const cookieParser = require('cookie-parser');
 const fs = require('fs');
 const oauth = require('simple-oauth2');
 
-const authTokens = fs.readFileSync(path.join(__dirname, '../oauth.json'));
+const authTokens = JSON.parse(fs.readFileSync('./oauth.json').toString());
 const router = express.Router();
 const SITE_LOC = process.env.SITE_LOC;
 
-const discord = oauth.create({
+const github = oauth.create({
     client: {
-        id: authTokens.discord.client,
-        secret: authTokens.discord.secret
+        id: authTokens.github.client,
+        secret: authTokens.github.secret
     },
     auth: {
         tokenHost: 'https://github.com',
         tokenPath: '/login/oauth/access_token',
         authorizePath: '/login/oauth/authorize',
     }
-})
+});
+
+const githubUrl = github.authorizationCode.authorizeURL({
+    redirect_uri: 'http://localhost:5000/api/auth/github/callback',
+    scope: ""
+});
 
 
 const redirect = encodeURIComponent('http://localhost:5000/api/auth/callback');
@@ -65,6 +70,46 @@ router.get('/discord/callback', catchAsync(async (req, res) => {
 
     let result = await authenticate(json.access_token,req,res);
 }));
+
+router.get('/github',(req, res) => {
+    console.log(githubUrl)
+    res.redirect(githubUrl);
+});
+
+router.get('/github/callback',async (req, res, next) => {
+    if (!req.query.code) throw new Error('NoCodeProvided');
+    const tokenConfig = {
+        code: req.query.code,
+        redirect_uri: 'http://localhost:5000/api/auth/github/callback',
+        scope: '', // also can be an array of multiple scopes, ex. ['<scope1>, '<scope2>', '...']
+    };
+        try {
+            const result = await github.authorizationCode.getToken(tokenConfig);
+            if(result.error){
+                next(Error(result.error));
+                return;
+            }
+            const accessToken = github.accessToken.create(result);
+            // console.log("Error: ", result.error);
+            // console.log(result,accessToken);
+
+            let response = await fetch(`https://api.github.com/user`,
+                {
+                    method: 'GET',
+                    headers: {
+                        Authorization: `Bearer ${accessToken.token.access_token}`
+                    }
+                });
+            let value = await response.json();
+            res.status(200).send({status: "VALID"});
+        } catch (e) {
+            console.log(e);
+            next(e);
+            return;
+        }
+
+
+});
 
 async function authenticate(access_token, req,res) {
     let response = await fetch(`https://discordapp.com/api/users/@me`,
