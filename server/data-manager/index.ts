@@ -5,10 +5,22 @@ const dbm = require('../database');
 
 
 
-let projects : Collection;
+let projects : Collection, users : Collection;
 dbm.connect((err,db)=>{
     projects = db.collection('projects');
     projects.createIndex({slug:1});
+    users = db.collection('users');
+    users.createIndexes([
+        {
+            key: {
+                "connection.discord": 1
+            }
+        }, {
+            key: {
+                "connection.github": 1
+            }
+        }
+    ])
 });
 
 
