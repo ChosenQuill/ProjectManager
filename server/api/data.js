@@ -1,4 +1,4 @@
-import {AuthenticationError} from "apollo-server-errors";
+const {AuthenticationError} = "apollo-server-errors";
 
 const dbm = require('../database');
 
