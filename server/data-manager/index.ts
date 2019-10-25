@@ -8,6 +8,7 @@ const dbm = require('../database');
 let projects : Collection;
 dbm.connect((err,db)=>{
     projects = db.collection('projects');
+    projects.createIndex({slug:1});
 });
 
 

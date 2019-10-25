@@ -20,17 +20,19 @@ router.use(cookieParser());
 
 router.get('/login', (req, res) => {
     console.log(req.query);
-    if(req.query.redirect)
-        res.cookie('redirect',req.query.redirect, {httpOnly: true});
-
-else if (req.cookies.redirect)
+    if(req.query.redirect) {
+        if(req.query.redirect === '/login')
+            req.query.redirect = '/';
+        res.cookie('redirect', req.query.redirect, {httpOnly: true});
+    }
+    else if (req.cookies.redirect)
         res.clearCookie('redirect');
     res.redirect(`https://discordapp.com/api/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${redirect}&response_type=code&scope=identify`);
 });
 
 router.get('/callback', catchAsync(async (req, res) => {
     if (!req.query.code) throw new Error('NoCodeProvided');
-
+    console.log(req);
     const code = req.query.code;
     const creds = btoa(`${CLIENT_ID}:${CLIENT_SECRET}`);
     const response = await fetch(`https://discordapp.com/api/oauth2/token?grant_type=authorization_code&code=${code}&redirect_uri=${redirect}`,
