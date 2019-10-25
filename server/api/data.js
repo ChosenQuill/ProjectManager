@@ -1,3 +1,5 @@
+import {AuthenticationError} from "apollo-server-errors";
+
 const dbm = require('../database');
 
 const { ApolloServer, gql } = require('apollo-server-express');
@@ -64,7 +66,7 @@ const resolvers = {
     Mutation: {
         Project: (parent, args, context) =>{
             if(!context.user.roles.includes('ADMIN') || !dbm.isConnected()){
-                return null;
+                throw new AuthenticationError("");
             }
             return ({name: args.name});
         }
