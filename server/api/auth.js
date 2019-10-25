@@ -4,12 +4,24 @@ const btoa = require('btoa');
 const { catchAsync } = require('../utils');
 const token = require('./token');
 const cookieParser = require('cookie-parser');
+const fs = require('fs');
+const oauth = require('simple-oauth2');
 
+const authTokens = fs.readFileSync(path.join(__dirname, '../oauth.json'));
 const router = express.Router();
-
-const CLIENT_ID = process.env.CLIENT_ID;
-const CLIENT_SECRET = process.env.CLIENT_SECRET;
 const SITE_LOC = process.env.SITE_LOC;
+
+const discord = oauth.create({
+    client: {
+        id: authTokens.discord.client,
+        secret: authTokens.discord.secret
+    },
+    auth: {
+        tokenHost: 'https://github.com',
+        tokenPath: '/login/oauth/access_token',
+        authorizePath: '/login/oauth/authorize',
+    }
+})
 
 
 const redirect = encodeURIComponent('http://localhost:5000/api/auth/callback');
@@ -18,7 +30,7 @@ const redirect = encodeURIComponent('http://localhost:5000/api/auth/callback');
 
 router.use(cookieParser());
 
-router.get('/login', (req, res) => {
+router.get('/discord', (req, res) => {
     console.log(req.query);
     if(req.query.redirect) {
         if(req.query.redirect === '/login')
@@ -30,7 +42,7 @@ router.get('/login', (req, res) => {
     res.redirect(`https://discordapp.com/api/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${redirect}&response_type=code&scope=identify`);
 });
 
-router.get('/callback', catchAsync(async (req, res) => {
+router.get('/discord/callback', catchAsync(async (req, res) => {
     if (!req.query.code) throw new Error('NoCodeProvided');
     console.log(req);
     const code = req.query.code;
