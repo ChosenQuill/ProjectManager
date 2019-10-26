@@ -26,10 +26,10 @@ class App extends React.Component {
             <ApolloProvider client={GraphQLClient}>
 
                     <Header className='header'>
-                        <a className='logo' href='https://www.suredroid.com'>
+                        <a className='logo' href='https://www.suredroid.com' >
                             <img src={logo} style={{height: '65%'}}/>
                             <span className='logoText link'>
-                                    SUREDROID
+                                SUREDROID
                             </span>
                         </a>
                     </Header>
@@ -45,6 +45,7 @@ class App extends React.Component {
                             <Route render={()=><Redirect to='/' />}/>
                         </Switch>
                     </Layout>
+                <Footer style={{textAlign: 'center'}}>Copyright © SureDroid</Footer>
             </ApolloProvider>
         );
     }

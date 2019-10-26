@@ -1,6 +1,5 @@
 const express = require('express');
 const fetch = require('node-fetch');
-const btoa = require('btoa');
 const { catchAsync } = require('../utils');
 const token = require('./token');
 const cookieParser = require('cookie-parser');
@@ -10,6 +9,52 @@ const oauth = require('simple-oauth2');
 const authTokens = JSON.parse(fs.readFileSync('./oauth.json').toString());
 const router = express.Router();
 const SITE_LOC = process.env.SITE_LOC;
+
+const redirect = encodeURIComponent('http://localhost:5000/api/auth/callback');
+
+// Router
+
+router.use(cookieParser());
+
+
+const discord = oauth.create({
+    client: {
+        id: authTokens.discord.client,
+        secret: authTokens.discord.secret
+    },
+    auth: {
+        tokenHost: 'https://discordapp.com/',
+        tokenPath: '/api/oauth2/token',
+        revokePath: '/api/oauth2/token/revoke',
+        authorizePath: '/api/oauth2/authorize',
+    }
+});
+
+const discordUrl = discord.authorizationCode.authorizeURL({
+    redirect_uri: 'http://localhost:5000/api/auth/discord/callback',
+});
+
+router.get('/discord', (req, res) => {
+    res.redirect(discordUrl);
+});
+
+router.get('/discord/callback', catchAsync(async (req, res) => {
+    if (!req.query.code) throw next(Error('NoCodeProvided'));
+    const code = req.query.code;
+
+    try {
+        const result = await discord.authorizationCode.getToken({code: code, redirect_uri: 'http://localhost:5000/api/auth/discord/callback'});
+        if (result.error) {
+            next(Error(result.error));
+            return;
+        }
+        const accessToken = discord.accessToken.create(result);
+
+        await authenticate(accessToken.token.access_token,req,res);
+    } catch (e) {
+        next(e);
+    }
+}));
 
 const github = oauth.create({
     client: {
@@ -28,49 +73,6 @@ const githubUrl = github.authorizationCode.authorizeURL({
     scope: ""
 });
 
-
-const redirect = encodeURIComponent('http://localhost:5000/api/auth/callback');
-
-// Router
-
-router.use(cookieParser());
-
-router.get('/discord', (req, res) => {
-    console.log(req.query);
-    if(req.query.redirect) {
-        if(req.query.redirect === '/login')
-            req.query.redirect = '/';
-        res.cookie('redirect', req.query.redirect, {httpOnly: true});
-    }
-    else if (req.cookies.redirect)
-        res.clearCookie('redirect');
-    res.redirect(`https://discordapp.com/api/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${redirect}&response_type=code&scope=identify`);
-});
-
-router.get('/discord/callback', catchAsync(async (req, res) => {
-    if (!req.query.code) throw new Error('NoCodeProvided');
-    console.log(req);
-    const code = req.query.code;
-    const creds = btoa(`${CLIENT_ID}:${CLIENT_SECRET}`);
-    const response = await fetch(`https://discordapp.com/api/oauth2/token?grant_type=authorization_code&code=${code}&redirect_uri=${redirect}`,
-        {
-            method: 'POST',
-            headers: {
-                Authorization: `Basic ${creds}`,
-            },
-        });
-    const json = await response.json();
-    if(json.scope !== 'identify')
-        throw new Error('Unauthorized');
-    if(!json.access_token)
-        if(json.error_description && json.error)
-            throw new Error(json.error + " | " + json.error_description);
-        else
-            throw new Error("Internal Server Error");
-
-    let result = await authenticate(json.access_token,req,res);
-}));
-
 router.get('/github',(req, res) => {
     console.log(githubUrl)
     res.redirect(githubUrl);
@@ -83,30 +85,29 @@ router.get('/github/callback',async (req, res, next) => {
         redirect_uri: 'http://localhost:5000/api/auth/github/callback',
         scope: '', // also can be an array of multiple scopes, ex. ['<scope1>, '<scope2>', '...']
     };
-        try {
-            const result = await github.authorizationCode.getToken(tokenConfig);
-            if(result.error){
-                next(Error(result.error));
-                return;
-            }
-            const accessToken = github.accessToken.create(result);
-            // console.log("Error: ", result.error);
-            // console.log(result,accessToken);
-
-            let response = await fetch(`https://api.github.com/user`,
-                {
-                    method: 'GET',
-                    headers: {
-                        Authorization: `Bearer ${accessToken.token.access_token}`
-                    }
-                });
-            let value = await response.json();
-            res.status(200).send({status: "VALID"});
-        } catch (e) {
-            console.log(e);
-            next(e);
+    try {
+        const result = await github.authorizationCode.getToken(tokenConfig);
+        if (result.error) {
+            next(Error(result.error));
             return;
         }
+        const accessToken = github.accessToken.create(result);
+        // console.log("Error: ", result.error);
+        // console.log(result,accessToken);
+
+        let response = await fetch(`https://api.github.com/user`,
+            {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${accessToken.token.access_token}`
+                }
+            });
+        let value = await response.json();
+        res.status(200).send({status: "VALID"});
+    } catch (e) {
+        console.log(e);
+        next(e);
+    }
 
 
 });
