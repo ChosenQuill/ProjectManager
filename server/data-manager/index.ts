@@ -1,4 +1,4 @@
-import {Collection} from "mongodb";
+ import {Collection} from "mongodb";
 
 const slugify = require('slugify');
 const dbm = require('../database');

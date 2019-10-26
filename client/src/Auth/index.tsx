@@ -33,6 +33,7 @@ class Api {
     public baseUrl = SITE_LOC;
     private data = {};
     private jwt : String = localStorage.getItem('token');
+    public loginLoc: string;
 
     constructor(){
         if(this.jwt){
@@ -67,18 +68,24 @@ class Api {
         let query = queryString.parse(location.search);
         if(query.token){
             this.setToken(query.token, true);
-            history.push(query.redirect);
-        } else {
-            this.login();
+            history.push(this.loginLoc == null ? '/home' : this.loginLoc);
+            this.loginLoc = null;
         }
 
         return (
-            <React.Fragment />
+            <Card className='card'>
+                Login options
+            </Card>
         );
     }
 
     login() {
-        window.open(this.baseUrl + "/api/auth/login?redirect=" + history.location.pathname,"_self");
+        if(history.location.pathname == '/login')
+            this.loginLoc = null;
+        else
+            this.loginLoc = history.location.pathname;
+        history.push('/login');
+        // window.open(this.baseUrl + "/api/auth/login?redirect=" + history.location.pathname,"_self");
     }
 
     logout(){
