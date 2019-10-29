@@ -66,7 +66,9 @@ class Api {
 
     private LoginComponentFunc(location,history){
         let query = queryString.parse(location.search);
-        if(query.token){
+        let [signUp, setSignUp] = useState(location.pathname === '/signup');
+
+        if(query.token && !signUp) {
             this.setToken(query.token, true);
             history.push(this.loginLoc == null ? '/home' : this.loginLoc);
             this.loginLoc = null;

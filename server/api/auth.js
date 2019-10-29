@@ -34,9 +34,43 @@ const discordUrl = discord.authorizationCode.authorizeURL({
     redirect_uri: 'http://localhost:5000/api/auth/discord/callback',
 });
 
-router.get('/discord', (req, res) => {
-    res.redirect(discordUrl);
+
+const github = oauth.create({
+    client: {
+        id: authTokens.github.client,
+        secret: authTokens.github.secret
+    },
+    auth: {
+        tokenHost: 'https://github.com',
+        tokenPath: '/login/oauth/access_token',
+        authorizePath: '/login/oauth/authorize',
+    }
 });
+
+const githubUrl = github.authorizationCode.authorizeURL({
+    redirect_uri: 'http://localhost:5000/api/auth/github/callback',
+    scope: ""
+});
+
+
+router.get('/login',((req, res) => {
+    if(!req.query.service){
+        throw new Error('No service provided.')
+    }
+    let {service} = req.query;
+    let url;
+    if(service === 'discord'){
+        url = discordUrl;
+    } else if (service === 'github'){
+        url = githubUrl;
+    } else
+        throw new Error('Invalid Service')
+    if(req.query.signUp && req.query.signUp === 'true')
+        res.cookie('signUp',true);
+    else if(req.cookies.signUp)
+        res.clearCookie('signUp');
+    res.redirect(url);
+}));
 
 router.get('/discord/callback', catchAsync(async (req, res) => {
     if (!req.query.code) throw next(Error('NoCodeProvided'));
@@ -56,27 +90,6 @@ router.get('/discord/callback', catchAsync(async (req, res) => {
     }
 }));
 
-const github = oauth.create({
-    client: {
-        id: authTokens.github.client,
-        secret: authTokens.github.secret
-    },
-    auth: {
-        tokenHost: 'https://github.com',
-        tokenPath: '/login/oauth/access_token',
-        authorizePath: '/login/oauth/authorize',
-    }
-});
-
-const githubUrl = github.authorizationCode.authorizeURL({
-    redirect_uri: 'http://localhost:5000/api/auth/github/callback',
-    scope: ""
-});
-
-router.get('/github',(req, res) => {
-    console.log(githubUrl)
-    res.redirect(githubUrl);
-});
 
 router.get('/github/callback',async (req, res, next) => {
     if (!req.query.code) throw new Error('NoCodeProvided');
