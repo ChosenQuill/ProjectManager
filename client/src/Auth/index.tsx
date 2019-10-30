@@ -8,7 +8,8 @@ import {Button, Card, Col, message, Row, Spin} from 'antd';
 import history from '../History';
 import { Typography } from 'antd';
 import Loading from "../Components/Loading";
-
+import {createButton, createSvgIcon, GithubLoginButton} from 'react-social-login-buttons'
+import discordIcon from '../assets/discord-logo.svg'
 const { Text, Title } = Typography;
 
 export const SITE_LOC = "http://localhost:5000";
@@ -27,6 +28,13 @@ export const GraphQLClient = new ApolloClient({
     }
 });
 
+export const DiscordLoginButton = createButton(
+    {
+        icon: createSvgIcon((size)=><img src={discordIcon} style={size}/>),
+        style: { background: "#7289DA" },
+        activeStyle: { background: "#5970C1" }
+    }
+);
 
 
 class Api {
@@ -40,13 +48,14 @@ class Api {
             this.validate().then(res=>{
                 if(res === false){
                     this.logout();
+                } else {
+                    history.replace('/home');
                 }
             }).catch(err=>{
                 console.log("Error validating token, logging out.");
                 this.logout();
             })
         }
-
 
     }
 
@@ -77,8 +86,14 @@ class Api {
         return (
             <Card className='card'>
                 Login options
+                <GithubLoginButton text={(signUp ? 'Sign Up' : 'Login') + ' With Github'} onClick={()=>window.open(this.serviceUrl('github',signUp),'_self')} style={{width: 400}}/>
+                <DiscordLoginButton text={(signUp ? 'Sign Up' : 'Login') + ' With Discord'} onClick={()=>window.open(this.serviceUrl('discord',signUp),'_self')} style={{width: 400}}/>
             </Card>
         );
+    }
+
+    private serviceUrl(service : string, signUp : boolean) : string {
+        return SITE_LOC + '/api/auth/login?service=' + service + (signUp ? '&signUp=true' : '');
     }
 
     login() {
@@ -87,7 +102,6 @@ class Api {
         else
             this.loginLoc = history.location.pathname;
         history.push('/login');
-        // window.open(this.baseUrl + "/api/auth/login?redirect=" + history.location.pathname,"_self");
     }
 
     logout(){

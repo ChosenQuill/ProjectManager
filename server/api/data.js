@@ -5,7 +5,7 @@ const dbm = require('../database');
 const { ApolloServer, gql } = require('apollo-server-express');
 const {buildSchema} = require('graphql');
 const token = require('./token');
-const {getProject, getProjects, createProject, deleteProject, updateProject, projectArray, ProjectData, renameProject} = require('../data-manager');
+const {getProject, getProjects, createProject, deleteProject, updateProject, ProjectData, renameProject} = require('../data-manager');
 
 
 const typeDefs = gql`
