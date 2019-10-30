@@ -27,11 +27,12 @@ const discord = oauth.create({
         tokenPath: '/api/oauth2/token',
         revokePath: '/api/oauth2/token/revoke',
         authorizePath: '/api/oauth2/authorize',
-    }
+    },
 });
 
 const discordUrl = discord.authorizationCode.authorizeURL({
     redirect_uri: 'http://localhost:5000/api/auth/discord/callback',
+    scope: 'identify'
 });
 
 
@@ -72,7 +73,7 @@ router.get('/login',((req, res) => {
     res.redirect(url);
 }));
 
-router.get('/discord/callback', catchAsync(async (req, res) => {
+router.get('/discord/callback', catchAsync(async (req, res, next) => {
     if (!req.query.code) throw next(Error('NoCodeProvided'));
     const code = req.query.code;
 
@@ -84,7 +85,9 @@ router.get('/discord/callback', catchAsync(async (req, res) => {
         }
         const accessToken = discord.accessToken.create(result);
 
-        await authenticate(accessToken.token.access_token,req,res);
+        console.log(accessToken);
+        res.status(200).send({status: "VALID"});
+        // await authenticate(accessToken.token.access_token,req,res);
     } catch (e) {
         next(e);
     }
@@ -96,7 +99,6 @@ router.get('/github/callback',async (req, res, next) => {
     const tokenConfig = {
         code: req.query.code,
         redirect_uri: 'http://localhost:5000/api/auth/github/callback',
-        scope: '', // also can be an array of multiple scopes, ex. ['<scope1>, '<scope2>', '...']
     };
     try {
         const result = await github.authorizationCode.getToken(tokenConfig);
