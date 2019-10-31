@@ -4,7 +4,7 @@ import queryString from "query-string";
 import PropTypes from 'prop-types';
 import ApolloClient, {gql, InMemoryCache} from "apollo-boost";
 import {useQuery} from '@apollo/react-hooks';
-import {Button, Card, Col, message, Row, Spin} from 'antd';
+import {Button, Card, Checkbox, Col, message, Row, Spin} from 'antd';
 import history from '../History';
 import { Typography } from 'antd';
 import Loading from "../Components/Loading";
@@ -75,7 +75,15 @@ class Api {
 
     private LoginComponentFunc(location,history){
         let query = queryString.parse(location.search);
-        let [signUp, setSignUp] = useState(location.pathname === '/signup');
+        let signUp = location.pathname === '/signup';
+        let [tos, setTos] = useState(!signUp);
+        let login = (service)=> {
+            if(tos){
+                window.open(this.serviceUrl(service,signUp),'_self');
+            } else {
+                message.error("You must agree to the terms and conditions before continuing.")
+            }
+        };
 
         if(query.token && !signUp) {
             this.setToken(query.token, true);
@@ -85,9 +93,22 @@ class Api {
 
         return (
             <Card className='card'>
-                Login options
-                <GithubLoginButton text={(signUp ? 'Sign Up' : 'Login') + ' With Github'} onClick={()=>window.open(this.serviceUrl('github',signUp),'_self')} style={{width: 400}}/>
-                <DiscordLoginButton text={(signUp ? 'Sign Up' : 'Login') + ' With Discord'} onClick={()=>window.open(this.serviceUrl('discord',signUp),'_self')} style={{width: 400}}/>
+                <div style={{margin: "0 auto", width: '400px'}}>
+                    <Title style={{textAlign: 'center'}}>
+                        {
+                            signUp ? "Sign Up" : "Log In"
+                        }
+                    </Title>
+                <GithubLoginButton text={(signUp ? 'Sign Up' : 'Login') + ' With Github'} onClick={()=>login('github')} />
+                <DiscordLoginButton text={(signUp ? 'Sign Up' : 'Login') + ' With Discord'} onClick={()=>login('discord')} />
+                    {
+                        signUp &&
+                            <Checkbox onChange={e=>setTos(e.target.checked)} style={{margin: '5px'}}>
+                                I agree to the <a href={'/tos'}>terms and conditions</a>.
+                            </Checkbox>
+
+                    }
+                </div>
             </Card>
         );
     }
