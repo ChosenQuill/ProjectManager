@@ -4,7 +4,7 @@ import './Normalize.css';
 
 import logo from './assets/logo.png';
 
-import {Layout, Typography} from "antd";
+import {Card, Layout, Typography} from "antd";
 import {Route, withRouter, Switch, Redirect} from "react-router-dom";
 import {ApolloProvider} from '@apollo/react-hooks';
 
@@ -40,6 +40,9 @@ class App extends React.Component {
                             <Route path={['/login','/signup']} component={AuthApi.LoginComponent}/>
                             {/*---- ToDo (Billing, Pricing) ----*/}
                             <Route path='/pricing' />
+                            
+                            <Route path='/tos' component={Tos}/>
+                            <Route path='/terms' render={()=><Redirect to='/tos' />}/>
 
                             <Route render={()=><Redirect to='/' />}/>
                         </Switch>
@@ -49,6 +52,14 @@ class App extends React.Component {
         );
     }
 
+}
+
+function tos(props){
+    return (
+        <Card class='card'>
+
+        </Card>
+    )
 }
 
 
