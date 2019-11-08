@@ -1,10 +1,12 @@
 const express = require('express');
 const cors = require('cors');
+const {getDB} = require('./database');
 const app = express();
+
+
 
 // Routes
 app.use(cors());
-
 
 app.use('/api/auth', require('./api/auth'));
 app.use('/api/auth',(err, req, res, next) => {
@@ -36,4 +38,12 @@ app.get('/', (req, res) => {
 
 app.listen(5000, () => {
     console.info('Running on port 5000');
+});
+
+// If the Node process ends, close the Mongoose connection
+process.on('SIGINT', function() {
+    getDB().close(function () {
+        console.log('Server default connection disconnected through app termination');
+        process.exit(0);
+    });
 });

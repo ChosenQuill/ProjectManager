@@ -1,3 +1,5 @@
+const {onceConnected} = require("../database");
+import {Collection, Db} from "mongodb";
 const express = require('express');
 const fetch = require('node-fetch');
 const { catchAsync } = require('../utils');
@@ -5,10 +7,12 @@ const token = require('./token');
 const cookieParser = require('cookie-parser');
 const fs = require('fs');
 const oauth = require('simple-oauth2');
+const {getDb} = require('../database');
 
 const authTokens = JSON.parse(fs.readFileSync('./oauth.json').toString());
 const router = express.Router();
 const SITE_LOC = process.env.SITE_LOC;
+
 
 const redirect = encodeURIComponent('http://localhost:5000/api/auth/callback');
 
@@ -73,6 +77,22 @@ router.get('/login',((req, res) => {
     res.redirect(url);
 }));
 
+let users : Collection;
+onceConnected((db)=>{
+    users = db.collection('users');
+    users.createIndexes([
+        {
+            key: {
+                "connection.discord": 1
+            }
+        }, {
+            key: {
+                "connection.github": 1
+            }
+        }
+    ])
+});
+
 router.get('/discord/callback', catchAsync(async (req, res, next) => {
     if (!req.query.code) throw next(Error('NoCodeProvided'));
     const code = req.query.code;
@@ -84,8 +104,17 @@ router.get('/discord/callback', catchAsync(async (req, res, next) => {
             return;
         }
         const accessToken = discord.accessToken.create(result);
+        let response = await fetch(`https://discordapp.com/api/users/@me`,
+            {
+                method: 'GET',
+                headers: {
+                    Authorization: `Bearer ${accessToken.token.access_token}`
+                }
+            });
+        let identity = await response.json();
+        console.log(identity);
 
-        console.log(accessToken);
+
         res.status(200).send({status: "VALID"});
         // await authenticate(accessToken.token.access_token,req,res);
     } catch (e) {
@@ -118,6 +147,7 @@ router.get('/github/callback',async (req, res, next) => {
                 }
             });
         let value = await response.json();
+        console.log(value);
         res.status(200).send({status: "VALID"});
     } catch (e) {
         console.log(e);
