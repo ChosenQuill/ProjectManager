@@ -58,7 +58,7 @@ const typeDefs = gql`
 
 
     type Mutation {
-        Project(name: String!) : ProjectOps
+        Project(id: String!) : ProjectOps
     }
 `;
 
@@ -110,6 +110,7 @@ const resolvers = {
         }
     }
 };
+// TODO Change Projects to use ids and change authorization to check and get database user.
 
 const server = new ApolloServer({ typeDefs, resolvers, context: ({req})=>{
         if(req.headers.authorization) {

@@ -13,11 +13,11 @@ dbm.connect().then((db) => {
     process.exit(-2);
 });
 
-async function hasProject(id: String, name: string) {
+async function hasProject(userID: String, projectID: string) {
     return await accounts.countDocuments({name}, {limit: 1}) == 1;
 }
 
-async function createProject(id: String, name: string): Promise<Status> {
+async function createProject(userID: String, projectID: string): Promise<Status> {
     if (await hasProject(name)) {
         return new Status(false, "Project is already created. Try a different name.");
     }
@@ -27,7 +27,7 @@ async function createProject(id: String, name: string): Promise<Status> {
     return new Status(true);
 }
 
-async function deleteProject(id: String, name: string): Promise<Status> {
+async function deleteProject(userID: String, projectID: string): Promise<Status> {
     if (!await hasProject(name)) {
         return new Status(false, "Project does not exist, please try a different name.");
     }
@@ -35,7 +35,7 @@ async function deleteProject(id: String, name: string): Promise<Status> {
     return new Status(true);
 }
 
-async function updateProject(id: String, name: string, project: ProjectData): Promise<Status> {
+async function updateProject(userID: String, projectID: string, project: ProjectData): Promise<Status> {
     if (await hasProject(name)) {
         return new Status(false, "Project does not exist, please try a different name.");
     }
@@ -43,7 +43,7 @@ async function updateProject(id: String, name: string, project: ProjectData): Pr
     return new Status(true);
 }
 
-async function renameProject(id: String, oldName: string, newName: string): Promise<Status> {
+async function renameProject(userID: String, projectID: string, newName: string): Promise<Status> {
     if (!await hasProject(oldName)) {
         return new Status(false, "Project does not exist, please try a different name.");
     }
@@ -54,7 +54,7 @@ async function renameProject(id: String, oldName: string, newName: string): Prom
     return new Status(true);
 }
 
-async function getProjects(id: String, seeHidden: boolean) {
+async function getProjects(userID: String, seeHidden: boolean) {
     if (!seeHidden)
         return projects.find({visible: true}).toArray();
     else
