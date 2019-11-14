@@ -48,7 +48,7 @@ const typeDefs = gql`
     type Query {
         me: User!
         projects: [ProjectData!]!
-        project(slug: String!) : ProjectData
+        project(userID: String!, projectID: String!) : ProjectData
     }
 
 
