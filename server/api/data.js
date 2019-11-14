@@ -10,11 +10,6 @@ const {getProject, getProjects, createProject, deleteProject, updateProject, Pro
 
 const typeDefs = gql`
 
-    type Status {
-        completed: Boolean!
-        message: String
-    }
-
     type User {
         name: String
         id: ID
@@ -41,10 +36,10 @@ const typeDefs = gql`
     }
 
     type ProjectOps {
-        create : Status!
-        update(data : ProjectInput!) : Status!
-        remove : Status!
-        rename(name : String!) : Status!
+        create : Boolean!
+        update(data : ProjectInput!) : Boolean!
+        remove : Boolean!
+        rename(name : String!) : Boolean!
     }
 
     # The "Query" type is special: it lists all of the available queries that
