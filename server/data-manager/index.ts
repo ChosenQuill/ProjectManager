@@ -1,11 +1,10 @@
-import {Collection} from "mongodb";
-
+import {Collection, ObjectID} from "mongodb";
 const slugify = require('slugify');
 const dbm = require('../database');
 
 let accounts: Collection, users: Collection;
 
-dbm.connect().then((db) => {
+dbm.onceConnected((db) => {
     accounts = db.collection('accounts');
     accounts.createIndex({"projects.slug": 1});
 }).catch((err)=>{
@@ -13,21 +12,24 @@ dbm.connect().then((db) => {
     process.exit(-2);
 });
 
-async function hasProject(userID: String, projectID: string) {
+async function hasProject(userID: string, projectID: string) {
     return await accounts.countDocuments({name}, {limit: 1}) == 1;
 }
 
-async function createProject(userID: String, projectID: string): Promise<Status> {
-    if (await hasProject(name)) {
-        return new Status(false, "Project is already created. Try a different name.");
+async function createProject(userID: string, projectID: string): Promise<Boolean> {
+    if (await hasProject(userID, projectID)) {
+        throw new Error("Project is already created. Try a different name.");
     }
+    await accounts.updateOne({"_id": new ObjectID(id)},{
+
+    });
     await projects.insertOne({
         ...new ProjectData({name})
     });
-    return new Status(true);
+    return true;
 }
 
-async function deleteProject(userID: String, projectID: string): Promise<Status> {
+async function deleteProject(userID: string, projectID: string): Promise<Status> {
     if (!await hasProject(name)) {
         return new Status(false, "Project does not exist, please try a different name.");
     }
@@ -35,7 +37,7 @@ async function deleteProject(userID: String, projectID: string): Promise<Status>
     return new Status(true);
 }
 
-async function updateProject(userID: String, projectID: string, project: ProjectData): Promise<Status> {
+async function updateProject(userID: string, projectID: string, project: ProjectData): Promise<Status> {
     if (await hasProject(name)) {
         return new Status(false, "Project does not exist, please try a different name.");
     }
@@ -43,7 +45,7 @@ async function updateProject(userID: String, projectID: string, project: Project
     return new Status(true);
 }
 
-async function renameProject(userID: String, projectID: string, newName: string): Promise<Status> {
+async function renameProject(userID: string, projectID: string, newName: string): Promise<Status> {
     if (!await hasProject(oldName)) {
         return new Status(false, "Project does not exist, please try a different name.");
     }
@@ -54,7 +56,7 @@ async function renameProject(userID: String, projectID: string, newName: string)
     return new Status(true);
 }
 
-async function getProjects(userID: String, seeHidden: boolean) {
+async function getProjects(userID: string, seeHidden: boolean) {
     if (!seeHidden)
         return projects.find({visible: true}).toArray();
     else
