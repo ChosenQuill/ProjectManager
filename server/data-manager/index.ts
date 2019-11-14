@@ -20,40 +20,40 @@ async function createProject(userID: string, projectID: string): Promise<Boolean
     if (await hasProject(userID, projectID)) {
         throw new Error("Project is already created. Try a different name.");
     }
-    await accounts.updateOne({"_id": new ObjectID(id)},{
+    await accounts.updateOne({"_id": new ObjectID(projectID)},{
 
     });
-    await projects.insertOne({
-        ...new ProjectData({name})
-    });
+    // await projects.insertOne({
+    //     ...new ProjectData({name})
+    // });
     return true;
 }
 
-async function deleteProject(userID: string, projectID: string): Promise<Status> {
+async function deleteProject(userID: string, projectID: string): Promise<boolean> {
     if (!await hasProject(name)) {
-        return new Status(false, "Project does not exist, please try a different name.");
+        throw new Error("Project does not exist, please try a different name.");
     }
     await projects.deleteOne({name});
-    return new Status(true);
+    return true;
 }
 
-async function updateProject(userID: string, projectID: string, project: ProjectData): Promise<Status> {
+async function updateProject(userID: string, projectID: string, project: ProjectData): Promise<boolean> {
     if (await hasProject(name)) {
-        return new Status(false, "Project does not exist, please try a different name.");
+        throw new Error("Project does not exist, please try a different name.");
     }
     await projects.updateOne({name}, {$set: {name, ...project}});
-    return new Status(true);
+    return true;
 }
 
-async function renameProject(userID: string, projectID: string, newName: string): Promise<Status> {
+async function renameProject(userID: string, projectID: string, newName: string): Promise<boolean> {
     if (!await hasProject(oldName)) {
-        return new Status(false, "Project does not exist, please try a different name.");
+        throw new Error("Project does not exist, please try a different name.");
     }
     if (await hasProject(newName)) {
-        return new Status(false, "Project is already created. Try a different name.");
+        throw new Error("Project is already created. Try a different name.");
     }
     await projects.updateOne({name: oldName}, {$set: {name: newName, slug: slugify(newName)}});
-    return new Status(true);
+    return true;
 }
 
 async function getProjects(userID: string, seeHidden: boolean) {
@@ -63,7 +63,7 @@ async function getProjects(userID: string, seeHidden: boolean) {
         return projects.find().toArray();
 }
 
-async function getProject(slug: string, isAuth: boolean) {
+async function getProject(userID: string, projectID: String, isAuth: boolean) {
     let project = await projects.findOne({slug: slug});
     if (!project || (!isAuth && !project.visible))
         return null;

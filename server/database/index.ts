@@ -1,4 +1,6 @@
-const {Db} = require("mongodb");
+import {Db} from "mongodb";
+
+// const {Db} = require("mongodb");
 
 
 const MongoClient = require('mongodb').MongoClient;
