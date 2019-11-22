@@ -26,9 +26,9 @@ const connect = () : Promise<Db> => {
             } else {
                 console.log("Connected successfully to server");
                 db = client.db(dbName);
-                resolve(db);
                 connectionList.forEach(func=>func(db));
                 connectionList = [];
+                resolve(db);
             }
         });
     }))
