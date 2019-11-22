@@ -15,7 +15,6 @@ import Intro from "./Pages/Intro";
 const {Paragraph, Title, Text} = Typography;
 const {Header, Content, Footer, Sider} = Layout;
 
-
 class App extends React.Component {
     constructor(props) {
         super(props);
@@ -24,7 +23,6 @@ class App extends React.Component {
     render() {
         return (
             <ApolloProvider client={GraphQLClient}>
-
                     <Header className='header'>
                         <a className='logo' href='https://www.suredroid.com' >
                             <img src={logo} style={{height: '65%'}}/>

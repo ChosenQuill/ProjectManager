@@ -12,11 +12,11 @@ dbm.onceConnected((db) => {
     process.exit(-2);
 });
 
-async function hasProject(userID: string, projectID: string) {
+async function hasProject(userID: ObjectID, projectID: string) {
     return await accounts.countDocuments({name}, {limit: 1}) == 1;
 }
 
-async function createProject(userID: string, projectID: string): Promise<Boolean> {
+async function createProject(userID: ObjectID, projectID: string): Promise<Boolean> {
     if (await hasProject(userID, projectID)) {
         throw new Error("Project is already created. Try a different name.");
     }
@@ -29,42 +29,42 @@ async function createProject(userID: string, projectID: string): Promise<Boolean
     return true;
 }
 
-async function deleteProject(userID: string, projectID: string): Promise<boolean> {
-    if (!await hasProject(name)) {
+async function deleteProject(userID: ObjectID, projectID: string): Promise<boolean> {
+    if (!await hasProject(userID, projectID)) {
         throw new Error("Project does not exist, please try a different name.");
     }
     await projects.deleteOne({name});
     return true;
 }
 
-async function updateProject(userID: string, projectID: string, project: ProjectData): Promise<boolean> {
-    if (await hasProject(name)) {
+async function updateProject(userID: ObjectID, projectID: string, project: ProjectData): Promise<boolean> {
+    if (await hasProject(userID, projectID)) {
         throw new Error("Project does not exist, please try a different name.");
     }
     await projects.updateOne({name}, {$set: {name, ...project}});
     return true;
 }
 
-async function renameProject(userID: string, projectID: string, newName: string): Promise<boolean> {
-    if (!await hasProject(oldName)) {
+async function renameProject(userID: ObjectID, projectID: string, newName: string): Promise<boolean> {
+    if (!await hasProject(userID, projectID)) {
         throw new Error("Project does not exist, please try a different name.");
     }
-    if (await hasProject(newName)) {
+    if (await hasProject(userID, projectID)) {
         throw new Error("Project is already created. Try a different name.");
     }
     await projects.updateOne({name: oldName}, {$set: {name: newName, slug: slugify(newName)}});
     return true;
 }
 
-async function getProjects(userID: string, seeHidden: boolean) {
+async function getProjects(userID: ObjectID, seeHidden: boolean) {
     if (!seeHidden)
         return projects.find({visible: true}).toArray();
     else
         return projects.find().toArray();
 }
 
-async function getProject(userID: string, projectID: String, isAuth: boolean) {
-    let project = await projects.findOne({slug: slug});
+async function getProject(userID: ObjectID, projectID: String, isAuth: boolean) {
+    let project = await accounts.findOne({_id: userID});
     if (!project || (!isAuth && !project.visible))
         return null;
     return project;

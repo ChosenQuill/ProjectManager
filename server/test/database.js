@@ -12,7 +12,7 @@ describe('Modify',()=>{
             throw new Error('Random error')
         }).to.not.throw();
     })
-})
+});
 
 
 
