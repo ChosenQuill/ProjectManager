@@ -34,27 +34,6 @@ const connect = () : Promise<Db> => {
     }))
 };
 
-/*  Database Model
-    Users - Contain all login info
-        _id
-        AccountID
-        connections
-            discord
-            github
-
-    If login and confirmed through social service, accountid is signed using private key and given. Else if the accountid is in plain text with a unique identifier before it (such as ID_), then we can determine that the id is from a public source.
-
-    Accounts - Contain all info about the account
-        _id
-        Name
-        Email
-        Avatar
-        Projects []
-            Slug
-            Name
-            Visible
-            ... Other Project Data
- */
 
 const isConnected = () : boolean => !!client && !!client.topology && client.topology.isConnected();
 

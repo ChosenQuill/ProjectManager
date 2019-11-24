@@ -26,6 +26,7 @@ const typeDefs = gql`
         description: String
         slug: String
         visible: Boolean
+        name: String
     }
 
     type ProjectData {
@@ -39,7 +40,6 @@ const typeDefs = gql`
         create : Boolean!
         update(data : ProjectInput!) : Boolean!
         remove : Boolean!
-        rename(name : String!) : Boolean!
     }
 
     # The "Query" type is special: it lists all of the available queries that

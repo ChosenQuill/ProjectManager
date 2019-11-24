@@ -1,4 +1,3 @@
-const {onceConnected} = require("../database");
 import {Collection, Db} from "mongodb";
 const express = require('express');
 const fetch = require('node-fetch');
@@ -7,19 +6,27 @@ const token = require('./token');
 const cookieParser = require('cookie-parser');
 const fs = require('fs');
 const oauth = require('simple-oauth2');
-const {getDb} = require('../database');
+const {onceConnected} = require('../database');
 
 const authTokens = JSON.parse(fs.readFileSync('./oauth.json').toString());
 const router = express.Router();
 const SITE_LOC = process.env.SITE_LOC;
 
-
 const redirect = encodeURIComponent('http://localhost:5000/api/auth/callback');
 
+let users : Collection;
+onceConnected((db)=>{
+    users = db.collection('users');
+    users.createIndex({
+        "type": 1,
+        "id": 1
+    });
+});
+
+
+
 // Router
-
 router.use(cookieParser());
-
 
 const discord = oauth.create({
     client: {
@@ -76,22 +83,6 @@ router.get('/login',((req, res) => {
         res.clearCookie('signUp');
     res.redirect(url);
 }));
-
-let users : Collection;
-onceConnected((db)=>{
-    users = db.collection('users');
-    users.createIndexes([
-        {
-            key: {
-                "connection.discord": 1
-            }
-        }, {
-            key: {
-                "connection.github": 1
-            }
-        }
-    ])
-});
 
 router.get('/discord/callback', catchAsync(async (req, res, next) => {
     if (!req.query.code) throw next(Error('NoCodeProvided'));
