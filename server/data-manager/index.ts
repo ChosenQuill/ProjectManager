@@ -1,70 +1,85 @@
 import {Collection, ObjectID} from "mongodb";
+
 const slugify = require('slugify');
 const dbm = require('../database');
+const shortid = require('shortid');
 
-let accounts: Collection, users: Collection;
+let accounts: Collection;
 
 dbm.onceConnected((db) => {
     accounts = db.collection('accounts');
     accounts.createIndex({"projects.slug": 1});
-}).catch((err)=>{
+}).catch((err) => {
     console.log(err);
     process.exit(-2);
 });
 
-async function hasProject(userID: ObjectID, projectID: string) {
-    return await accounts.countDocuments({name}, {limit: 1}) == 1;
+async function hasProject(accountID: ObjectID, projectID: string) {
+    return await accounts.countDocuments({'_id': accountID, 'projects.id': projectID}, {limit: 1}) == 1;
 }
 
-async function createProject(userID: ObjectID, projectID: string): Promise<Boolean> {
-    if (await hasProject(userID, projectID)) {
-        throw new Error("Project is already created. Try a different name.");
+async function createProject(accountID: ObjectID, name: string): Promise<Boolean> {
+    let results = await accounts.updateOne(
+        {
+            "_id": accountID,
+        }, {
+            $push: {
+                projects: {
+                    id: shortid.generate(),
+                    name
+                }
+            }
+        });
+    if(results.modifiedCount != 1) {
+        throw new Error("Error... New Project Not Created");
     }
-    await accounts.updateOne({"_id": new ObjectID(projectID)},{
+    return true;
+}
 
+async function deleteProject(accountID: ObjectID, projectID: string): Promise<boolean> {
+    let results = await accounts.updateOne(
+        {'_id': accountID},
+        {
+            $pull: {
+                'projects': {
+                    id: projectID
+                }
+            }
+        }
+    );
+    if(results.modifiedCount != 1){
+        throw new Error("This project does not exist.");
+    }
+    return true;
+}
+
+async function updateProject(accountID: ObjectID, projectID: string, project: ProjectData): Promise<boolean> {
+    let results = await accounts.updateOne({
+        '_id': accountID,
+        'project.id': projectID
+    }, {
+        $push: {
+            'projects.$': {
+                id: projectID,
+                ...project
+            }
+        }
     });
-    // await projects.insertOne({
-    //     ...new ProjectData({name})
-    // });
+    if(results.matchedCount != 1){
+        throw new Error("This project does not exist.");
+    }
     return true;
 }
 
-async function deleteProject(userID: ObjectID, projectID: string): Promise<boolean> {
-    if (!await hasProject(userID, projectID)) {
-        throw new Error("Project does not exist, please try a different name.");
-    }
-    await projects.deleteOne({name});
-    return true;
-}
-
-async function updateProject(userID: ObjectID, projectID: string, project: ProjectData): Promise<boolean> {
-    if (await hasProject(userID, projectID)) {
-        throw new Error("Project does not exist, please try a different name.");
-    }
-    await projects.updateOne({name}, {$set: {name, ...project}});
-    return true;
-}
-
-async function renameProject(userID: ObjectID, projectID: string, newName: string): Promise<boolean> {
-    if (!await hasProject(userID, projectID)) {
-        throw new Error("Project does not exist, please try a different name.");
-    }
-    if (await hasProject(userID, projectID)) {
-        throw new Error("Project is already created. Try a different name.");
-    }
-    await projects.updateOne({name: oldName}, {$set: {name: newName, slug: slugify(newName)}});
-    return true;
-}
-
-async function getProjects(userID: ObjectID, seeHidden: boolean) {
+async function getProjects(accountID: ObjectID, seeHidden: boolean) {
     if (!seeHidden)
-        return projects.find({visible: true}).toArray();
+        return accounts.find({_id: accountID, 'projects.visible': true},{projection: {projects: 1, _id: 0}}).toArray();
     else
-        return projects.find().toArray();
+        return accounts.find({_id: accountID},{projection: {projects: 1, _id: 0}}).toArray();
 }
 
-async function getProject(userID: ObjectID, projectID: String, isAuth: boolean) {
-    let project = await accounts.findOne({_id: userID});
+async function getProject(accountID: ObjectID, projectID: String, isAuth: boolean) {
+    let project = await accounts.findOne({_id: accountID});
     if (!project || (!isAuth && !project.visible))
         return null;
     return project;
@@ -96,10 +111,6 @@ class ProjectData {
     visible: boolean = false;
 }
 
-function getUsers(): Collection {
-    return users;
-}
-
 
 module.exports = {
     ProjectData,
@@ -107,6 +118,5 @@ module.exports = {
     createProject,
     deleteProject,
     updateProject,
-    renameProject,
     getProject,
 };
