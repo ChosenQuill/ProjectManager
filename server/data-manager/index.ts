@@ -9,9 +9,6 @@ let accounts: Collection;
 dbm.onceConnected((db) => {
     accounts = db.collection('accounts');
     accounts.createIndex({"projects.slug": 1});
-}).catch((err) => {
-    console.log(err);
-    process.exit(-2);
 });
 
 async function hasProject(accountID: ObjectID, projectID: string) {
@@ -53,16 +50,17 @@ async function deleteProject(accountID: ObjectID, projectID: string): Promise<bo
     return true;
 }
 
-async function updateProject(accountID: ObjectID, projectID: string, project: ProjectData): Promise<boolean> {
+async function updateProject(accountID: ObjectID, projectID: string, project: Object): Promise<boolean> {
+    let projChanges = {};
+    Object.keys(project).forEach((key)=>{
+          projChanges['projects.$.' + key] = project[key];
+    });
     let results = await accounts.updateOne({
         '_id': accountID,
         'project.id': projectID
     }, {
         $push: {
-            'projects.$': {
-                id: projectID,
-                ...project
-            }
+            ...projChanges
         }
     });
     if(results.matchedCount != 1){

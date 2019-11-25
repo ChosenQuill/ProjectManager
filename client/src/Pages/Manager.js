@@ -23,7 +23,7 @@ function Manager() {
 
     return (
         <LevelManager>
-            <LevelCheck level={AuthLevel.ADMIN} redirect={true}>
+            <LevelCheck level={AuthLevel.USER} redirect={true}>
                 <ManagerSider selected={selectedKeys} setSelected={setSelected}/>
                 <Content>
                     <Switch>

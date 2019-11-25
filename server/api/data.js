@@ -18,8 +18,8 @@ const typeDefs = gql`
     }
 
     enum Role {
-        MEMBER,
-        ADMIN
+        USER,
+        GUEST
     }
 
     input ProjectInput {
@@ -53,17 +53,17 @@ const typeDefs = gql`
 
 
     type Mutation {
-        Project(id: String!) : ProjectOps
+        Project(userID : String!, projectID: String) : ProjectOps
     }
 `;
 
 const resolvers = {
     Mutation: {
         Project: (parent, args, context) =>{
-            if(!context.user.roles.includes('ADMIN') || !dbm.isConnected()){
+            if(!context.user.roles.includes('USER') || !dbm.isConnected()){
                 throw new AuthenticationError("");
             }
-            return ({name: args.name});
+            return ({hasProjectID: (args.projectID),...args});
         }
 
     },
@@ -74,17 +74,17 @@ const resolvers = {
         projects: (parent,args,context)=> {
             if(!dbm.isConnected())
                 return null;
-            return getProjects(context.user.roles.includes('ADMIN'));
+            return getProjects(context.user.roles.includes('USER'));
         },
         project: (parent, args, context) =>{
             if(!dbm.isConnected())
                 return null;
-            return getProject(args.slug,context.user.roles.includes('ADMIN'))
+            return getProject(args.slug,context.user.roles.includes('USER'))
         }
     },
     User: {
         avatarUrl: (parent, args, context) => {
-            if(context.user.roles.includes('MEMBER')){
+            if(context.user.roles.includes('USER')){
                 return `https://cdn.discordapp.com/avatars/${context.user.id}/${context.user.avatar}.png`;
             }
             else return null;
@@ -92,16 +92,14 @@ const resolvers = {
     },
     ProjectOps: {
         create: (parent, args, context) => {
-            return createProject(parent.name);
+            return createProject(context.user.id, args.name);
         },
         remove: (parent, args, context) => {
-            return deleteProject(parent.name);
+            return deleteProject(context.user.id, parent.id);
         },
         update: (parent, args, context) =>{
-            return updateProject(parent.name, new ProjectData({...args.data}));
-        },
-        rename: (parent, args, context) =>{
-            return renameProject(parent.name, args.name);
+            console.log(parent);
+            return updateProject(context.user.id, parent.id,{...args.data});
         }
     }
 };
@@ -111,9 +109,9 @@ const server = new ApolloServer({ typeDefs, resolvers, context: ({req})=>{
         if(req.headers.authorization) {
             try{
                 let userVals = token.verify(req.headers.authorization);
-                let roles = ['MEMBER'];
+                let roles = ;
                 if(userVals.id === '217015504932438026')
-                    roles.push('ADMIN');
+                    roles.push('USER');
                 return {user: {roles,...userVals}};
             } catch(e) {
                 console.log(e);
@@ -123,3 +121,7 @@ const server = new ApolloServer({ typeDefs, resolvers, context: ({req})=>{
     }});
 
 module.exports = server;
+
+class Role {
+    
+}

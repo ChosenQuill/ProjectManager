@@ -23,8 +23,6 @@ onceConnected((db)=>{
     });
 });
 
-
-
 // Router
 router.use(cookieParser());
 
@@ -76,7 +74,7 @@ router.get('/login',((req, res) => {
     } else if (service === 'github'){
         url = githubUrl;
     } else
-        throw new Error('Invalid Service')
+        throw new Error('Invalid Service');
     if(req.query.signUp && req.query.signUp === 'true')
         res.cookie('signUp',true);
     else if(req.cookies.signUp)
@@ -104,7 +102,7 @@ router.get('/discord/callback', catchAsync(async (req, res, next) => {
             });
         let identity = await response.json();
         console.log(identity);
-
+        console.log(await token.encrypt({id: identity.id, name: identity.username, avatar: identity.avatar}));
 
         res.status(200).send({status: "VALID"});
         // await authenticate(accessToken.token.access_token,req,res);

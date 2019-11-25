@@ -153,8 +153,7 @@ class Api {
 export const AuthApi = new Api();
 
 export const AuthLevel = {
-    MEMBER: 'MEMBER',
-    ADMIN: 'ADMIN'
+    USER: 'USER',
 };
 
 const LevelQuery = gql`

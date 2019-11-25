@@ -3,7 +3,10 @@ const cors = require('cors');
 const {getDB, connect} = require('./database');
 const app = express();
 
-connect();
+connect().catch((err) => {
+    console.log(err);
+    process.exit(-2);
+});
 
 // Routes
 app.use(cors());
