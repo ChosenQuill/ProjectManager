@@ -1,174 +1,174 @@
 import {Collection, Db} from "mongodb";
+import {AuthorizationTokenConfig, ModuleOptions, OAuthClient} from "simple-oauth2";
+import {AccountInfo} from '../data-manager';
+
 const express = require('express');
 const fetch = require('node-fetch');
-const { catchAsync } = require('../utils');
+const {catchAsync} = require('../utils');
 const token = require('./token');
 const cookieParser = require('cookie-parser');
 const fs = require('fs');
 const oauth = require('simple-oauth2');
 const {onceConnected} = require('../database');
+const {AccountManager} = require('../data-manager');
 
 const authTokens = JSON.parse(fs.readFileSync('./oauth.json').toString());
-const router = express.Router();
+export const router = express.Router();
 const SITE_LOC = process.env.SITE_LOC;
 
 const redirect = encodeURIComponent('http://localhost:5000/api/auth/callback');
 
-let users : Collection;
-onceConnected((db)=>{
-    users = db.collection('users');
-    users.createIndex({
-        "type": 1,
-        "id": 1
-    });
-});
-
 // Router
 router.use(cookieParser());
 
-const discord = oauth.create({
-    client: {
-        id: authTokens.discord.client,
-        secret: authTokens.discord.secret
-    },
-    auth: {
-        tokenHost: 'https://discordapp.com/',
-        tokenPath: '/api/oauth2/token',
-        revokePath: '/api/oauth2/token/revoke',
-        authorizePath: '/api/oauth2/authorize',
-    },
-});
 
-const discordUrl = discord.authorizationCode.authorizeURL({
-    redirect_uri: 'http://localhost:5000/api/auth/discord/callback',
-    scope: 'identify'
-});
+export class AuthService<ClientIdName extends string = 'client_id'> {
+    public readonly name: string;
+    public readonly client: OAuthClient;
+    public readonly scopes: string;
 
+    public readonly callbackUrl: string;
+    public readonly redirectUrl: string;
+    public readonly userInfoUrl: string;
+    public readonly extractInfo: (info: any) => AccountInfo;
 
-const github = oauth.create({
-    client: {
-        id: authTokens.github.client,
-        secret: authTokens.github.secret
-    },
-    auth: {
-        tokenHost: 'https://github.com',
-        tokenPath: '/login/oauth/access_token',
-        authorizePath: '/login/oauth/authorize',
+    private static services: Record<string, AuthService> = {};
+
+    public static has(name: string) {
+        return name in this.services;
     }
-});
 
-const githubUrl = github.authorizationCode.authorizeURL({
-    redirect_uri: 'http://localhost:5000/api/auth/github/callback',
-    scope: ""
-});
+    public static get(name: string) {
+        return AuthService.services[name];
+    }
 
+    constructor(name: string, options: ModuleOptions<ClientIdName>, scopes: string, userInfoUrl: string, extractInfo: (info: any) => AccountInfo) {
+        this.client = oauth.create(options);
+        this.scopes = scopes;
+        this.name = name;
+        this.callbackUrl = `http://localhost:5000/api/auth/${name}/callback`;
+        this.extractInfo = extractInfo;
+        this.redirectUrl = this.client.authorizationCode.authorizeURL({
+            redirect_uri: this.callbackUrl,
+            scope: scopes
+        });
+        if (name === 'discord') {
+            this.redirectUrl += '&prompt=none';
+        }
+        router.get(`/${name}/callback`,
+            async (req, res, next) => {
+                if (!req.query.code)
+                    next(Error('NoCodeProvided'));
+                const code = req.query.code;
+                try {
+                    const result = await this.client.authorizationCode.getToken({
+                        code: code,
+                        redirect_uri: 'http://localhost:5000/api/auth/discord/callback'
+                    });
+                    if (result.error) {
+                        next(Error(result.error));
+                        return;
+                    }
+                    const accessToken = this.client.accessToken.create(result);
+                    let response = await fetch(userInfoUrl,
+                        {
+                            method: 'GET',
+                            headers: {
+                                Authorization: `Bearer ${accessToken.token.access_token}`
+                            }
+                        });
+                    let identity = await response.json();
+                    if (!identity.id) {
+                        next(Error('Invalid Request'));
+                    }
+                    console.log(identity);
+                    let account;
+                    if (req.cookies.signUp) {
+                        account = await AccountManager.create(this, identity);
+                    } else {
+                        account = await AccountManager.get(this.name, identity.id);
+                    }
 
-router.get('/login',((req, res) => {
-    if(!req.query.service){
+                    if (!account) {
+                        next(Error('Invalid Request'));
+                        return;
+                    }
+                    let jwt = token.encrypt({id: account});
+                    res.status(200).redirect(SITE_LOC + 'login?token=' + jwt);
+                } catch (e) {
+                    next(e);
+                }
+            }
+        );
+
+        AuthService.services[name] = this;
+    }
+
+    public static readonly DISCORD = new AuthService<'discord'>(
+        'discord',
+        {
+            client: {
+                id: authTokens.discord.client,
+                secret: authTokens.discord.secret
+            },
+            auth: {
+                tokenHost: 'https://discordapp.com/',
+                tokenPath: '/api/oauth2/token',
+                revokePath: '/api/oauth2/token/revoke',
+                authorizePath: '/api/oauth2/authorize',
+            },
+        },
+        'identify',
+        'https://discordapp.com/api/users/@me',
+        user => {
+            return {
+                name: user.username,
+                avatar: `https://cdn.discordapp.com/avatars/${user.id}/${user.avatar}.png`
+            }
+        }
+    );
+
+    public static readonly GITHUB = new AuthService<'github'>(
+        'github',
+        {
+            client: {
+                id: authTokens.github.client,
+                secret: authTokens.github.secret
+            },
+            auth: {
+                tokenHost: 'https://github.com',
+                tokenPath: '/login/oauth/access_token',
+                authorizePath: '/login/oauth/authorize',
+            }
+        },
+        '',
+        'https://api.github.com/user',
+        user => {
+            return {
+                name: user.name,
+                avatar: user.avatar_url
+            };
+        }
+    );
+}
+
+router.get('/login', ((req, res) => {
+    if (!req.query.service) {
         throw new Error('No service provided.')
     }
     let {service} = req.query;
-    let url;
-    if(service === 'discord'){
-        url = discordUrl;
-    } else if (service === 'github'){
-        url = githubUrl;
-    } else
+    if (!AuthService.has(service)) {
         throw new Error('Invalid Service');
-    if(req.query.signUp && req.query.signUp === 'true')
-        res.cookie('signUp',true);
-    else if(req.cookies.signUp)
+    }
+    if (req.query.signUp && req.query.signUp === 'true')
+        res.cookie('signUp', true);
+    else if (req.cookies.signUp)
         res.clearCookie('signUp');
-    res.redirect(url);
+    res.redirect(AuthService.get(service).redirectUrl);
 }));
 
-router.get('/discord/callback', catchAsync(async (req, res, next) => {
-    if (!req.query.code) throw next(Error('NoCodeProvided'));
-    const code = req.query.code;
-
-    try {
-        const result = await discord.authorizationCode.getToken({code: code, redirect_uri: 'http://localhost:5000/api/auth/discord/callback'});
-        if (result.error) {
-            next(Error(result.error));
-            return;
-        }
-        const accessToken = discord.accessToken.create(result);
-        let response = await fetch(`https://discordapp.com/api/users/@me`,
-            {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${accessToken.token.access_token}`
-                }
-            });
-        let identity = await response.json();
-        console.log(identity);
-        console.log(await token.encrypt({id: identity.id, name: identity.username, avatar: identity.avatar}));
-
-        res.status(200).send({status: "VALID"});
-        // await authenticate(accessToken.token.access_token,req,res);
-    } catch (e) {
-        next(e);
-    }
-}));
-
-
-router.get('/github/callback',async (req, res, next) => {
-    if (!req.query.code) throw new Error('NoCodeProvided');
-    const tokenConfig = {
-        code: req.query.code,
-        redirect_uri: 'http://localhost:5000/api/auth/github/callback',
-    };
-    try {
-        const result = await github.authorizationCode.getToken(tokenConfig);
-        if (result.error) {
-            next(Error(result.error));
-            return;
-        }
-        const accessToken = github.accessToken.create(result);
-        // console.log("Error: ", result.error);
-        // console.log(result,accessToken);
-
-        let response = await fetch(`https://api.github.com/user`,
-            {
-                method: 'GET',
-                headers: {
-                    Authorization: `Bearer ${accessToken.token.access_token}`
-                }
-            });
-        let value = await response.json();
-        console.log(value);
-        res.status(200).send({status: "VALID"});
-    } catch (e) {
-        console.log(e);
-        next(e);
-    }
-
-
-});
-
-async function authenticate(access_token, req,res) {
-    let response = await fetch(`https://discordapp.com/api/users/@me`,
-        {
-           method: 'GET',
-            headers: {
-               Authorization: `Bearer ${access_token}`
-            }
-        });
-    let identity = await response.json();
-
-    // console.log("Identity: " + JSON.stringify(identity));
-    if(identity.id) {
-        let jwt = token.encrypt({id: identity.id, name: identity.username, avatar: identity.avatar});
-        console.log("JWT Token: " + jwt);
-        console.log('Cookies: ' + JSON.stringify(req.cookies));
-        res.status(200).redirect(SITE_LOC + 'login?token=' + jwt + (req.cookies.redirect  ? ('&redirect=' + req.cookies.redirect) : ''));
-    }
-    else
-        throw new Error('Unauthorized');
-}
-
-router.get('/validate',catchAsync(async (req,res)=> {
-    if(!req.query.token)
+router.get('/validate', catchAsync(async (req, res) => {
+    if (!req.query.token)
         throw new Error('NoTokenProvided');
     try {
         token.verify(req.query.token);
@@ -177,5 +177,3 @@ router.get('/validate',catchAsync(async (req,res)=> {
     }
     res.status(200).send({status: "VALID"});
 }));
-
-module.exports = router;

@@ -19,12 +19,12 @@ The plan is for external (non-signed) public id's to be used to allow the user t
         > Index: Compound of first type, then ID.
 2. Accounts | Contains all the info used by the user.
     1. _id
-    2. name
-    3. email
-    4. avatar
-    5. projects []
+    2. projects []
         1. id | Short ID as String instead of ObjectID
         2. slug
         3. name
         4. visible
         5. ... Other Project Data
+    > Account Info
+    3. name
+    4. avatar
