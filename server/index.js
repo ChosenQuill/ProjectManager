@@ -11,7 +11,7 @@ connect().catch((err) => {
 // Routes
 app.use(cors());
 
-app.use('/api/auth', require('./api/auth'));
+app.use('/api/auth', require('./api/auth').router);
 app.use('/api/auth',(err, req, res, next) => {
     switch (err.message) {
         case 'NoCodeProvided' || 'NoTokenProvided':
@@ -25,6 +25,7 @@ app.use('/api/auth',(err, req, res, next) => {
                 error: err.message + " | " + "Not Authorized to perform this request."
             });
         default:
+            console.log(err)
             return res.status(500).send({
                 status: 'ERROR',
                 error: err.message,

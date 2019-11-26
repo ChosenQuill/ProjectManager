@@ -47,7 +47,7 @@ function onceConnected(resolve : (db: Db) => any) {
 }
 
 module.exports = {
-    client : MongoClient,
+    client,
     getDB: () => db,
     connect,
     isConnected,
