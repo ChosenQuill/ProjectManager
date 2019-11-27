@@ -5,7 +5,7 @@ const {buildSchema} = require('graphql');
 const token = require('./token');
 const {ProjectManager, AccountManager} = require('../data-manager');
 const ObjectId = require('mongodb').ObjectId;
-const {Role} = require('../role');
+const {Role, Permission} = require('../role');
 
 const typeDefs = gql`
 
@@ -13,7 +13,7 @@ const typeDefs = gql`
         name: String
         id: ID
         avatarUrl: String
-        roles: [Role!]!
+        role: Role!
     }
 
     enum Role {
@@ -29,6 +29,7 @@ const typeDefs = gql`
     }
 
     type ProjectData {
+        id: String!
         name: String!
         description: String
         slug: String!
@@ -36,7 +37,7 @@ const typeDefs = gql`
     }
 
     type ProjectOps {
-        create : Boolean!
+        create(name: String!) : Boolean!
         update(data : ProjectInput!) : Boolean!
         remove : Boolean!
     }
@@ -59,49 +60,59 @@ const typeDefs = gql`
 const resolvers = {
     Mutation: {
         Project: (parent, args, context) => {
-            if (!context.user.roles.includes('USER') || !dbm.isConnected()) {
-                throw new AuthenticationError("");
-            }
             return ({hasProjectID: (args.projectID), ...args});
         }
 
     },
     Query: {
-        me: (parent, args, context) => {
-            return context.user;
+        me: () => {
+            return {};
         },
         projects: (parent, args, context) => {
-            if (!dbm.isConnected())
-                return null;
-            return ProjectManager.get(context.id, context.equals(Role.USER));
+            return ProjectManager.get(context.id, context.role.has(Permission.VIEW_ALL_PROJECTS));
         },
         project: (parent, args, context) => {
-            if (!dbm.isConnected())
-                return null;
-            return ProjectManager.getOne(context.id, args.projectID, context.equals(Role.USER))
+            return ProjectManager.getOne(context.id, args.projectID, context.role.equals(Role.USER))
         }
     },
     User: {
-        avatarUrl: (parent, args, context) => {
-            if (context.equals(Role.USER)) {
-                return "";
-            } else return null;
+        name: (parent, args, context) => {
+            return "Some name"
+        },
+        avatarUrl: async (parent, args, context) => {
+            let result = await AccountManager.getProperties(context.id,['avatar']);
+            return result.avatar;
+        },
+        role: (parent, args, context) => {
+            return context.role.name;
+        },
+        id: (parent, args, context) => {
+            return context.id.toHexString();
         }
     },
     ProjectOps: {
         create: (parent, args, context) => {
+            if(!context.role.has(Permission.CREATE_PROJECT))
+                throw new AuthenticationError('You cannot perform this action.');
             return ProjectManager.create(context.id, args.name);
         },
         remove: (parent, args, context) => {
-            return ProjectManager.delete(context.id, parent.id);
+            if(!context.role.has(Permission.DELETE_PROJECT))
+                throw new AuthenticationError('You cannot perform this action.');
+            if(!parent.hasProjectID)
+                throw new Error('Invalid Request');
+            return ProjectManager.delete(context.id, parent.projectID);
         },
         update: (parent, args, context) => {
-            console.log(parent);
-            return ProjectManager.update(context.id, parent.id, {...args.data});
+            if(!context.role.has(Permission.UPDATE_PROJECT))
+                throw new AuthenticationError('You cannot perform this action.');
+            if(!parent.hasProjectID)
+                throw new Error('Invalid Request');
+            return ProjectManager.update(context.id, parent.projectID, {...args.data});
         }
     }
 };
-// TODO Change Projects to use ids and change authorization to check and get database user.
+
 
 const server = new ApolloServer({
     typeDefs, resolvers, context: ({req}) => {
@@ -118,9 +129,13 @@ const server = new ApolloServer({
             throw new AuthenticationError("Must either have an identity or authorization token.");
         }
 
+        if(!dbm.isConnected()){
+            throw Error('Database Not Online');
+        }
+
         // Valid OID Check
         let oid = new ObjectId(id);
-        if(oid.toHexString() !== id || !AccountManager.has(oid)) {
+        if (oid.toHexString() !== id || !AccountManager.has(oid)) {
             throw new AuthenticationError('Invalid ID')
         }
         return new User(oid, authenticated ? Role.USER : Role.GUEST);

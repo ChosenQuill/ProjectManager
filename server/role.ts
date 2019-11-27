@@ -6,14 +6,16 @@ const Permission = {
     DELETE_PROJECT: 'DELETE_PROJECT',
     UPDATE_PROJECT: 'UPDATE_PROJECT',
     VIEW_PUBLIC_PROJECTS: 'VIEW_PUBLIC_PROJECTS',
-    VIEW_ALL_PROJECTS: 'VIEW_HIDDEN_PROJECTS',
+    VIEW_ALL_PROJECTS: 'VIEW_ALL_PROJECTS',
+
+    ACCESS_PROFILE: 'ACCESS_PROFILE'
 };
 
 class Role {
     public static GUEST : Role = new Role('GUEST', [Permission.VIEW_PUBLIC_PROJECTS]);
-    public static USER : Role = new Role('USER',[Permission.CREATE_PROJECT,Permission.DELETE_PROJECT,Permission.UPDATE_PROJECT,Permission.VIEW_ALL_PROJECTS,Permission.VIEW_PUBLIC_PROJECTS]);
+    public static USER : Role = new Role('USER',[Permission.CREATE_PROJECT,Permission.DELETE_PROJECT,Permission.UPDATE_PROJECT,Permission.VIEW_ALL_PROJECTS,Permission.VIEW_PUBLIC_PROJECTS, Permission.ACCESS_PROFILE]);
 
-    private readonly name: string;
+    public readonly name: string;
     private permissions: string[];
 
     private constructor(name : string, permissions: string[]) {

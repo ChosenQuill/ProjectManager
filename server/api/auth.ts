@@ -63,7 +63,7 @@ export class AuthService<ClientIdName extends string = 'client_id'> {
                 try {
                     const result = await this.client.authorizationCode.getToken({
                         code: code,
-                        redirect_uri: 'http://localhost:5000/api/auth/discord/callback'
+                        redirect_uri: `http://localhost:5000/api/auth/${name}/callback`
                     });
                     if (result.error) {
                         next(Error(result.error));
@@ -90,7 +90,7 @@ export class AuthService<ClientIdName extends string = 'client_id'> {
                     }
 
                     if (!account) {
-                        next(Error('Invalid Request'));
+                        res.redirect(SITE_LOC + 'signup?error=1');
                         return;
                     }
                     let jwt = token.encrypt({id: account});
