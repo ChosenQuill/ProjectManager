@@ -10,6 +10,7 @@
     align-items: center;
     height: 100%;
     color: inherit;
+    width: 230px;
 }
 
 .logo:hover {
@@ -44,4 +45,8 @@
     width: 100%;
     left: 0;
     background: rgba(0, 0, 0, .6);
+}
+
+.card {
+    margin: 20px;
 }
