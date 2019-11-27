@@ -73,6 +73,10 @@ class Api {
 
     public LoginComponent = withRouter(({location,history}) => this.LoginComponentFunc(location,history));
 
+    private readonly errors = {
+        "1": "You must create an account before you can log in.",
+    };
+
     private LoginComponentFunc(location,history){
         let query = queryString.parse(location.search);
         let signUp = location.pathname === '/signup';
@@ -90,6 +94,12 @@ class Api {
             history.push(this.loginLoc == null ? '/home' : this.loginLoc);
             this.loginLoc = null;
         }
+
+        if(query.error){
+            // message.error(this.errors[query.error.toString()]);
+            // Finish
+        }
+
 
         return (
             <Card className='card'>
@@ -154,30 +164,31 @@ export const AuthApi = new Api();
 
 export const AuthLevel = {
     USER: 'USER',
+    GUEST: 'GUEST'
 };
 
 const LevelQuery = gql`
-    query getRoles {
+    query getRole {
         me {
-            roles
+            role
         }
     }
 `;
 
-const RolesContext = React.createContext({status: 'ERROR', roles:[]});
+const RoleContext = React.createContext({status: 'ERROR', role:'GUEST'});
 
-export const GetRoles = RolesContext.Consumer;
+export const GetRole = RoleContext.Consumer;
 
 export function LevelManager(props){
     const {loading, error, data} = useQuery(LevelQuery);
     const [errorDisplayed, setErrorDisplayed] = useState(false);
-    let value = {status: 'LOADING', roles: []};
+    let value = {status: 'LOADING', role: ''};
     if(!loading) {
         if(error)
             value.status = 'ERROR';
         else {
             value.status = 'SUCCESS';
-            value.roles = data.me.roles;
+            value.role = data.me.role;
         }
     }
 
@@ -192,19 +203,19 @@ export function LevelManager(props){
         setErrorDisplayed(false);
     }
 
-    return (<RolesContext.Provider value={value}>
+    return (<RoleContext.Provider value={value}>
         {props.children}
-    </RolesContext.Provider>);
+    </RoleContext.Provider>);
 }
 
 export function LevelCheck(props) {
-    return <GetRoles children={({roles, status})=>{
+    return <GetRole children={({role, status})=>{
         if(status === 'LOADING'){
             return (
                 <Loading />
             );
         }
-        if(roles.includes(props.level))
+        if(role === props.level)
             return props.children;
         else if(props.redirect)
             AuthApi.login();
@@ -221,7 +232,7 @@ export function LevelCheck(props) {
     }}/>;
 }
 
-LevelCheck.context = RolesContext;
+LevelCheck.context = RoleContext;
 
 LevelCheck.propTypes = {
     level: PropTypes.oneOf(Object.values(AuthLevel)).isRequired,

@@ -9,7 +9,7 @@ let accounts: Collection, users: Collection;
 
 dbm.onceConnected((db) => {
     accounts = db.collection('accounts');
-    accounts.createIndex({"projects.slug": 1});
+    accounts.createIndex({"projects.id": 1});
 
     users = db.collection('users');
     users.createIndex({
@@ -25,7 +25,7 @@ class AccountManager {
 
     async create(service: AuthService, userInfo: any): Promise<String> {
         let accountInfo = service.extractInfo(userInfo);
-        if(await this.hasUser(service.name, userInfo.id))
+        if (await this.hasUser(service.name, userInfo.id))
             return await this.get(service.name, userInfo.id);
         let accountResult = await accounts.insertOne({
             projects: [],
@@ -39,13 +39,13 @@ class AccountManager {
         return accountResult.insertedId.toHexString();
     }
 
-    private async hasUser(type: string, id: string){
+    private async hasUser(type: string, id: string) {
         return await users.countDocuments({
             connections: {
                 type,
                 id
             }
-        },{limit: 1}) == 1;
+        }, {limit: 1}) == 1;
     }
 
     async get(service: string, id: string) {
@@ -63,6 +63,19 @@ class AccountManager {
         if (result)
             return result.accountID;
         return null;
+    }
+
+    async getProperties(accountID: ObjectID, properties: string[]) {
+        let values = {};
+        properties.forEach(p => values[p] = 1);
+        return await accounts.findOne({
+            _id: accountID
+        }, {
+            projection: {
+                _id: 0,
+                ...values
+            }
+        })
     }
 
 }
@@ -87,7 +100,9 @@ class ProjectManager {
                 $push: {
                     projects: {
                         id: shortid.generate(),
-                        name
+                        name,
+                        slug: slugify(name),
+                        visible: false
                     }
                 }
             });
@@ -134,22 +149,53 @@ class ProjectManager {
     }
 
     async get(accountID: ObjectID, seeHidden: boolean) {
-        if (!seeHidden)
-            return accounts.find({_id: accountID, 'projects.visible': true}, {
-                projection: {
-                    projects: 1,
-                    _id: 0
+        if (!seeHidden) {
+            let result = await accounts.aggregate([
+                {
+                    '$match': {
+                        '_id': accountID
+                    }
+                }, {
+                    '$project': {
+                        'projects': {
+                            '$filter': {
+                                'input': '$projects',
+                                'as': 'project',
+                                'cond': {
+                                    '$eq': [
+                                        '$$project.visible', true
+                                    ]
+                                }
+                            }
+                        },
+                        '_id': 0
+                    }
                 }
-            }).toArray();
-        else
-            return accounts.find({_id: accountID}, {projection: {projects: 1, _id: 0}}).toArray();
+            ]).next();
+            return result.projects;
+        } else {
+            let result = await accounts.findOne({_id: accountID}, {projection: {projects: 1, _id: 0}});
+            return result.projects;
+        }
     }
 
     async getOne(accountID: ObjectID, projectID: String, isAuth: boolean) {
-        let project = await accounts.findOne({_id: accountID});
-        if (!project || (!isAuth && !project.visible))
-            return null;
-        return project;
+        let result = await accounts.findOne({_id: accountID},
+            {
+                projection: {
+                    _id: 0,
+                    projects: {
+                        '$elemMatch': {
+                            id: projectID
+                        }
+                    }
+                }
+            }
+        );
+        if(!result.projects || (!isAuth && !result.projects[0].visible))
+            throw new Error('Project does not exist.');
+
+        return result.projects[0];
     }
 }
 

@@ -28,7 +28,7 @@ function Manager() {
                 <Content>
                     <Switch>
                         <Route exact path='/home' render={(props) => <Home setSelected={setSelected} {...props}/>}/>
-                        <Route path='/project/:slug' render={(props) => <Edit setSelected={setSelected} {...props} />}/>
+                        <Route path='/project/:id' render={(props) => <Edit setSelected={setSelected} {...props} />}/>
                         <Route path='/settings' render={(props) => <Settings setSelected={setSelected} {...props} />}/>
                         <Route render={() => <Redirect to='/home'/>}/>
                     </Switch>
@@ -58,7 +58,7 @@ const GET_PROJS = gql`
         projects {
             name
             description
-            slug
+            id
         }
     }
 `;
@@ -102,7 +102,7 @@ function ManagerSider(props) {
                         (!loading && !error) &&
                         data.projects.map((proj) => {
                             return (
-                                <Menu.Item key={'proj_' + proj.slug}>
+                                <Menu.Item key={'proj_' + proj.id}>
                                     {proj.name}
                                 </Menu.Item>
                             );
@@ -121,7 +121,7 @@ function ManagerSider(props) {
     );
 }
 
-// let trimRE = /^(.{0,80})(?: |$)/;
+// let trimRE = /^(.{0,80})(?: |$)/; //Regex for trimming description length down
 
 function Projects() {
     const {loading, error, data} = useQuery(GET_PROJS);
@@ -131,17 +131,15 @@ function Projects() {
             refetchQueries: ['getProjs']
         });
 
-    const deleteButton = (name) => {
+    const deleteButton = (id) => {
         deleteProj({
             variables: {
-                name: name,
+                id: id,
             }
         }).then(value => {
-            const result = value.data.Project.remove;
-            if (result.completed)
-                message.success('Project has been deleted!');
-            else
-                message.error(result.message);
+            message.success('Project has been deleted!');
+        }).catch(err=>{
+            message.error(err.graphQLErrors[0].message);
         });
     };
 
@@ -164,8 +162,8 @@ function Projects() {
                         return (
                             <List.Item actions={[
                                 <Button type='primary' shape='circle' icon='edit'
-                                        onClick={() => history.push('project/' + item.slug)}/>,
-                                <Popconfirm onConfirm={() => deleteButton(item.name)}
+                                        onClick={() => history.push('project/' + item.id)}/>,
+                                <Popconfirm onConfirm={() => deleteButton(item.id)}
                                             title='Are you sure you want to delete this project?'
                                             okText="Yes"
                                             cancelText="No"
@@ -189,10 +187,10 @@ function Projects() {
 
 
 const GET_PROJ = gql`
-    query getProj($slug: String!) {
-        project(slug: $slug) {
+    query getProj($id: String!) {
+        project(projectID: $id) {
+            id
             name
-            slug
             description
             visible
         }
@@ -200,30 +198,25 @@ const GET_PROJ = gql`
 `;
 
 const UPDATE_PROJ = gql`
-    mutation updateProj($name:String!,$data:ProjectInput! ) {
-        Project(name:$name){
-            update(data:$data) {
-                completed
-                message
-            }
+    mutation updateProj($id:String!,$data:ProjectInput! ) {
+        Project(projectID:$id){
+            update(data:$data)
         }
     }
 `;
 
-const RENAME_PROJ = gql`
-    mutation renameProj($name:String!,$newname:String! ){
-        Project(name:$name){
-            rename(name:$newname){
-                completed
-                message
-            }
+const DELETE_PROJ = gql`
+    mutation deleteProj($id: String!){
+        Project(projectID: $id){
+            remove
         }
     }
 `;
+
 
 function Edit(props) {
-    let {slug} = useParams();
-    const {loading, error, data, refetch} = useQuery(GET_PROJ, {variables: {slug}});
+    let {id} = useParams();
+    const {loading, error, data, refetch} = useQuery(GET_PROJ, {variables: {id}});
 
     const [changesMade, setChanges] = useState(false);
     const [project, setProject] = useState({});
@@ -231,41 +224,35 @@ function Edit(props) {
     const [updateProj] = useMutation(UPDATE_PROJ, {
         refetchQueries: ['getProj']
     });
-    const [renameProj] = useMutation(RENAME_PROJ, {
-        refetchQueries: ['getProjs']
-    });
 
     useEffect(() => {
-        props.setSelected(['projects', 'proj_' + slug]);
-        if(project && project.slug !== slug){
+        props.setSelected(['projects', 'proj_' + id]);
+        if(project && project.id !== id){
             refetch().then(()=>setProject({}));
         }
-    }, [slug]);
+    }, [id]);
 
 
     const saveChanges = () => {
+        updateProj({
+            variables: {
+                id: project.id,
+                data: {
 
+                }
+            }
+        }).then(value => {
+            message.success('Project has been renamed!');
+        }).catch(err=>{
+            message.error(err.graphQLErrors[0].message);
+        });
         setChanges(false);
     };
 
-    const changeName = (newName) => {
-        if(project.name === newName)
-            return;
-        renameProj({
-            variables: {
-                name: project.name,
-                newname: newName,
-            }
-        }).then(value => {
-            const data = value.data;
-            if (data.Project.rename.completed) {
-                message.success('Project has been renamed!');
-                history.replace('/project/' + slugify(newName));
-            } else
-                message.error(data.Project.rename.message);
+    const change = (property, value) => {
 
-        });
     };
+
 
     if (loading)
         return (
@@ -290,7 +277,7 @@ function Edit(props) {
         return (
             <Card className='card'>
                 <Title level={2} editable={{
-                    onChange: (text) => changeName(text)
+                    onChange: (text) => {}
                 }}>
                     {project.name}
                 </Title>
@@ -314,11 +301,8 @@ function Edit(props) {
 
 const ADD_PROJ = gql`
     mutation createProj($name: String!){
-        Project(name: $name) {
-            create{
-                message
-                completed
-            }
+        Project(projectID: null) {
+            create(name: $name)
         }
     }
 `;
@@ -340,12 +324,10 @@ function CreateProject() {
                 variables: {
                     name: name.input.value,
                 }
-            }).then(value => {
-                const data = value.data;
-                if (data.Project.create.completed)
-                    message.success('Project has been created!');
-                else
-                    message.error(data.Project.create.message);
+            }).then(() => {
+                message.success('Project has been created!');
+            }).catch(err=>{
+                message.error(err.graphQLErrors[0].message);
             });
         }
     };
@@ -361,17 +343,6 @@ function CreateProject() {
         </Card>
     );
 }
-
-const DELETE_PROJ = gql`
-    mutation deleteProj($name: String!){
-        Project(name: $name){
-            remove {
-                message
-                completed
-            }
-        }
-    }
-`;
 
 function Home(props) {
     useEffect(() => {
