@@ -1,70 +1,201 @@
-import {Collection} from "mongodb";
+import {Collection, ObjectID} from "mongodb";
+import {AuthService} from '../api/auth';
 
 const slugify = require('slugify');
 const dbm = require('../database');
+const shortid = require('shortid');
 
+let accounts: Collection, users: Collection;
 
+dbm.onceConnected((db) => {
+    accounts = db.collection('accounts');
+    accounts.createIndex({"projects.id": 1});
 
-let projects : Collection;
-dbm.connect((err,db)=>{
-    projects = db.collection('projects');
-    projects.createIndex({slug:1});
+    users = db.collection('users');
+    users.createIndex({
+        "connections": 1
+    });
 });
 
-
-async function hasProject(name: string) {
-    return await projects.countDocuments({name}, {limit: 1}) == 1;
-}
-
-async function createProject(name: string): Promise<Status> {
-    if (await hasProject(name)) {
-        return new Status(false, "Project is already created. Try a different name.");
+/// Account Management
+class AccountManager {
+    async has(accountID: ObjectID) {
+        return await accounts.countDocuments({'_id': accountID}, {limit: 1}) == 1;
     }
-    await projects.insertOne({
-        ...new ProjectData({name})
-    });
-    return new Status(true);
-}
 
-async function deleteProject(name: string): Promise<Status> {
-    if (!await hasProject(name)) {
-        return new Status(false, "Project does not exist, please try a different name.");
+    async create(service: AuthService, userInfo: any): Promise<String> {
+        let accountInfo = service.extractInfo(userInfo);
+        if (await this.hasUser(service.name, userInfo.id))
+            return await this.get(service.name, userInfo.id);
+        let accountResult = await accounts.insertOne({
+            projects: [],
+            ...accountInfo
+        });
+
+        await users.insertOne({
+            accountID: accountResult.insertedId,
+            connections: [{type: service.name, id: userInfo.id}]
+        });
+        return accountResult.insertedId.toHexString();
     }
-    await projects.deleteOne({name});
-    return new Status(true);
-}
 
-async function updateProject(name: string, project: ProjectData): Promise<Status> {
-    if (await hasProject(name)) {
-        return new Status(false, "Project does not exist, please try a different name.");
+    private async hasUser(type: string, id: string) {
+        return await users.countDocuments({
+            connections: {
+                type,
+                id
+            }
+        }, {limit: 1}) == 1;
     }
-    await projects.updateOne({name},{$set: {name,...project}});
-    return new Status(true);
-}
 
-async function renameProject(oldName: string,newName: string): Promise<Status> {
-    if (!await hasProject(oldName)) {
-        return new Status(false, "Project does not exist, please try a different name.");
-    }
-    if (await hasProject(newName)) {
-        return new Status(false, "Project is already created. Try a different name.");
-    }
-    await projects.updateOne({name: oldName},{$set: {name: newName, slug: slugify(newName)}});
-    return new Status(true);
-}
-
-async function getProjects(seeHidden: boolean){
-    if(!seeHidden)
-        return projects.find({visible: true}).toArray();
-    else
-        return projects.find().toArray();
-}
-
-async function getProject(slug: string, isAuth: boolean){
-    let project = await projects.findOne({slug: slug});
-    if(!project || (!isAuth && !project.visible))
+    async get(service: string, id: string) {
+        let result = await users.findOne({
+            connections: {
+                type: service,
+                id: id,
+            }
+        }, {
+            projection: {
+                accountID: 1,
+                _id: 0
+            }
+        });
+        if (result)
+            return result.accountID;
         return null;
-    return project;
+    }
+
+    async getProperties(accountID: ObjectID, properties: string[]) {
+        let values = {};
+        properties.forEach(p => values[p] = 1);
+        return await accounts.findOne({
+            _id: accountID
+        }, {
+            projection: {
+                _id: 0,
+                ...values
+            }
+        })
+    }
+
+}
+
+export interface AccountInfo {
+    name: string;
+    avatar: string;
+}
+
+
+/// Project Management
+class ProjectManager {
+    async has(accountID: ObjectID, projectID: string) {
+        return await accounts.countDocuments({'_id': accountID, 'projects.id': projectID}, {limit: 1}) == 1;
+    }
+
+    async create(accountID: ObjectID, name: string): Promise<Boolean> {
+        let results = await accounts.updateOne(
+            {
+                "_id": accountID,
+            }, {
+                $push: {
+                    projects: {
+                        id: shortid.generate(),
+                        name,
+                        visible: false
+                    }
+                }
+            });
+        if (results.modifiedCount != 1) {
+            throw new Error("Error... New Project Not Created");
+        }
+        return true;
+    }
+
+    async delete(accountID: ObjectID, projectID: string): Promise<boolean> {
+        let results = await accounts.updateOne(
+            {'_id': accountID},
+            {
+                $pull: {
+                    'projects': {
+                        id: projectID
+                    }
+                }
+            }
+        );
+        if (results.modifiedCount != 1) {
+            throw new Error("This project does not exist.");
+        }
+        return true;
+    }
+
+    async update(accountID: ObjectID, projectID: string, project: any): Promise<boolean> {
+        let projChanges = {};
+        Object.keys(project).forEach((key) => {
+            projChanges['projects.$.' + key] = project[key];
+        });
+        let results = await accounts.updateOne({
+            '_id': accountID,
+            'projects.id': projectID
+        }, {
+            $set: {
+                ...projChanges
+            }
+        });
+        if (results.matchedCount != 1) {
+            throw new Error("This project does not exist.");
+        }
+        return true;
+    }
+
+    async get(accountID: ObjectID, seeHidden: boolean) {
+        if (!seeHidden) {
+            let result = await accounts.aggregate([
+                {
+                    '$match': {
+                        '_id': accountID
+                    }
+                }, {
+                    '$project': {
+                        'projects': {
+                            '$filter': {
+                                'input': '$projects',
+                                'as': 'project',
+                                'cond': {
+                                    '$eq': [
+                                        '$$project.visible', true
+                                    ]
+                                }
+                            }
+                        },
+                        '_id': 0
+                    }
+                }
+            ]).next();
+            return result.projects;
+        } else {
+            let result = await accounts.findOne({_id: accountID}, {projection: {projects: 1, _id: 0}});
+            return result.projects;
+        }
+    }
+
+    async getOne(accountID: ObjectID, projectID: String, isAuth: boolean) {
+        let result = await accounts.findOne({_id: accountID},
+            {
+                projection: {
+                    _id: 0,
+                    projects: {
+                        '$elemMatch': {
+                            id: projectID
+                        }
+                    }
+                }
+            }
+        );
+        if(!result.projects || (!isAuth && !result.projects[0].visible))
+            throw new Error('Project does not exist.');
+
+        return result.projects[0];
+    }
 }
 
 
@@ -82,10 +213,11 @@ class Status {
 class ProjectData {
     constructor(obj) {
         Object.assign(this, obj);
-        if(!this.slug){
+        if (!this.slug) {
             this.slug = slugify(this.name);
         }
     }
+
     name: string;
     description: string;
     slug: string;
@@ -95,10 +227,6 @@ class ProjectData {
 
 module.exports = {
     ProjectData,
-    getProjects,
-    createProject,
-    deleteProject,
-    updateProject,
-    renameProject,
-    getProject,
+    ProjectManager: new ProjectManager(),
+    AccountManager: new AccountManager(),
 };
