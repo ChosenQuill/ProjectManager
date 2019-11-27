@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const {getDB, connect} = require('./database');
+const {client, connect} = require('./database');
 const app = express();
 
 connect().catch((err) => {
@@ -46,7 +46,7 @@ app.listen(5000, () => {
 
 // If the Node process ends, close the Mongoose connection
 process.on('SIGINT', function() {
-    getDB().close(function () {
+    client.close(function () {
         console.log('Server default connection disconnected through app termination');
         process.exit(0);
     });
