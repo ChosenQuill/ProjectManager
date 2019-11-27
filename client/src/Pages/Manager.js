@@ -138,7 +138,7 @@ function Projects() {
             }
         }).then(value => {
             message.success('Project has been deleted!');
-        }).catch(err=>{
+        }).catch(err => {
             message.error(err.graphQLErrors[0].message);
         });
     };
@@ -220,6 +220,7 @@ function Edit(props) {
 
     const [changesMade, setChanges] = useState(false);
     const [project, setProject] = useState({});
+    const [map] = useState(new Map());
 
     const [updateProj] = useMutation(UPDATE_PROJ, {
         refetchQueries: ['getProj']
@@ -227,68 +228,76 @@ function Edit(props) {
 
     useEffect(() => {
         props.setSelected(['projects', 'proj_' + id]);
-        if(project && project.id !== id){
-            refetch().then(()=>setProject({}));
+        if (map.size > 0)
+            map.clear();
+        if (project && project.id !== id) {
+            refetch().then(() => setProject({})).catch(err => {
+                console.log("Error refreshing");
+            });
         }
     }, [id]);
 
 
     const saveChanges = () => {
+        if (map.size === 0) {
+            message.error('No changes were made.');
+            setChanges(false);
+            return;
+        }
+        let changes = [...map.entries()].reduce((obj, [key, value]) => (obj[key] = value, obj), {});
         updateProj({
             variables: {
                 id: project.id,
-                data: {
-
-                }
+                data: changes,
             }
-        }).then(value => {
-            message.success('Project has been renamed!');
-        }).catch(err=>{
-            message.error(err.graphQLErrors[0].message);
+        }).then(() => {
+            message.success('Changes have been saved!');
+            map.clear();
+        }).catch(err => {
+            console.log("Error Updating");
         });
         setChanges(false);
     };
 
     const change = (property, value) => {
-
+        if (project[property] === value || (map.has(property) && map.get(property) === value))
+            return;
+        if (!changesMade)
+            setChanges(true);
+        map.set(property, value);
     };
-
 
     if (loading)
         return (
             <Card className='card'>
-                <Loading />
+                <Loading/>
             </Card>
         );
     else if (error) {
-        message.error("There was an error finding your project.");
+        message.error(error.graphQLErrors[0].message);
         console.log(error);
         return <Redirect to='/home'/>;
     } else {
         if (Object.keys(project).length === 0) {
-            if (!data.project) {
-                message.error('We could not find the project you selected.');
-                return <Redirect to={'/home'}/>
-            } else
             setProject({...data.project});
         }
-        // if (project.slug !== slug)
-        //     return <Redirect to={'/home/' + project.slug}/>;
         return (
             <Card className='card'>
                 <Title level={2} editable={{
-                    onChange: (text) => {}
+                    onChange: (text) => {
+                        change('name', text);
+                        setProject({...project, name: text});
+                    }
                 }}>
                     {project.name}
                 </Title>
-                <Input.TextArea defaultValue={project.description} onChange={event => {
-                    if(!changesMade)
-                        setChanges(true);
-
+                <Input.TextArea value={project.description} onChange={event => {
+                    setProject({...project, description: event.target.value});
+                    change('description', event.target.value);
                 }}/>
 
                 {
-                    <Button type='primary' disabled={!changesMade} onClick={saveChanges} style={{marginTop: '14px'}} >
+                    <Button type='primary' disabled={!changesMade} onClick={saveChanges} style={{marginTop: '14px'}}>
                         Save Changes
                     </Button>
 
@@ -326,7 +335,7 @@ function CreateProject() {
                 }
             }).then(() => {
                 message.success('Project has been created!');
-            }).catch(err=>{
+            }).catch(err => {
                 message.error(err.graphQLErrors[0].message);
             });
         }
