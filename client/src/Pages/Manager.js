@@ -1,8 +1,8 @@
-import React from "react";
+import React, {useEffect, useState} from "react";
 
-import {AuthLevel, LevelCheck} from "../Auth";
-import {Switch, Route, Redirect} from 'react-router-dom';
-import {Button, Card, Form, Input, List, message, PageHeader, Typography} from "antd";
+import {AuthLevel, LevelCheck, LevelManager} from "../Auth";
+import {Switch, Route, Redirect, useParams} from 'react-router-dom';
+import {Button, Card, Form, Input, List, message, PageHeader, Popconfirm, Typography, Menu, Layout, Icon} from "antd";
 import {gql} from 'apollo-boost';
 
 import history from '../History'
@@ -10,57 +10,145 @@ import {useMutation, useQuery} from "@apollo/react-hooks";
 import Loading from "../Components/Loading";
 
 import './Manager.scss';
+import ReactMarkdown from "react-markdown";
+import slugify from "slugify";
 
 const {Title, Paragraph, Text} = Typography;
+const {SubMenu} = Menu;
+const {Header, Content, Footer, Sider} = Layout;
 
-function Manager(){
+
+function Manager() {
+    const [selectedKeys, setSelected] = useState(['home']);
+
     return (
-        <LevelCheck level={AuthLevel.ADMIN} redirect={true}>
-            <Switch>
-                <Route exact path='/admin' render={()=><Redirect to='/admin/home'/>} />
-                <Route path='/admin/home' component={Home}/>
-            </Switch>
-        </LevelCheck>
+        <LevelManager>
+            <LevelCheck level={AuthLevel.USER} redirect={true}>
+                <ManagerSider selected={selectedKeys} setSelected={setSelected}/>
+                <Content>
+                    <Switch>
+                        <Route exact path='/home' render={(props) => <Home setSelected={setSelected} {...props}/>}/>
+                        <Route path='/project/:id' render={(props) => <Edit setSelected={setSelected} {...props} />}/>
+                        <Route path='/settings' render={(props) => <Settings setSelected={setSelected} {...props} />}/>
+                        <Route render={() => <Redirect to='/home'/>}/>
+                    </Switch>
+                </Content>
+
+            </LevelCheck>
+        </LevelManager>
     );
 }
 
+
+function Settings(props) {
+    useEffect(() => props.setSelected(['settings']), []);
+
+    return (
+        <Card className='card'>
+            <PageHeader onBack={() => history.push('/home')} title="Settings" subTitle="Change your info">
+                Some settings here..
+            </PageHeader>
+        </Card>
+    )
+
+}
+
 const GET_PROJS = gql`
-    query getProj {
+    query getProjs {
         projects {
             name
             description
+            id
         }
     }
 `;
 
-function Projects(){
-    const { loading, error, data } = useQuery(GET_PROJS);
+function ManagerSider(props) {
+    const {loading, error, data} = useQuery(GET_PROJS);
+    const {selected, setSelected} = props;
+    return (
+        <Sider width={200} style={{background: '#'}}>
+            <Menu
+                mode="inline"
+                defaultSelectedKeys={['home']}
+                // defaultOpenKeys={['projects']}
+                style={{height: '100%'}}
+                onClick={param => {
+                    if (param.key.startsWith('proj_')) {
+                        history.push('/project/' + param.key.substr(5));
+                    } else {
+                        history.push('/' + param.key);
+                    }
+                }}
+                selectedKeys={selected}
+            >
+                <Menu.Item
+                    key="home"
+                >
+                    <Icon type="home"/>
+                    Home
+                </Menu.Item>
+                <SubMenu
+                    key="projects"
+                    title={
+                        <span>
+                  <Icon type={loading ? 'loading' : 'laptop'}/>
+                  Projects
+                </span>
+                    }
+                    disabled={(error)}
+                >
+                    {
+                        (!loading && !error) &&
+                        data.projects.map((proj) => {
+                            return (
+                                <Menu.Item key={'proj_' + proj.id}>
+                                    {proj.name}
+                                </Menu.Item>
+                            );
+                        })
+
+                    }
+                </SubMenu>
+                <Menu.Item
+                    key="settings"
+                >
+                    <Icon type="setting"/>
+                    Settings
+                </Menu.Item>
+            </Menu>
+        </Sider>
+    );
+}
+
+// let trimRE = /^(.{0,80})(?: |$)/; //Regex for trimming description length down
+
+function Projects() {
+    const {loading, error, data} = useQuery(GET_PROJS);
 
     const [deleteProj] = useMutation(DELETE_PROJ,
         {
-            refetchQueries: ['getProj']
+            refetchQueries: ['getProjs']
         });
 
-    const deleteButton = (name) => {
+    const deleteButton = (id) => {
         deleteProj({
             variables: {
-                name: name,
+                id: id,
             }
         }).then(value => {
-            const result = value.data.Project.remove;
-            if(result.completed)
-                message.success('Project has been deleted!');
-            else
-                message.error(result.message);
+            message.success('Project has been deleted!');
+        }).catch(err => {
+            message.error(err.graphQLErrors[0].message);
         });
     };
 
-    if(loading)
-        return <Loading />;
-    else if (error){
+    if (loading)
+        return <Loading/>;
+    else if (error) {
         message.error("There was an error grabbing the projects.");
         console.log(error);
-        return <React.Fragment />;
+        return <React.Fragment/>;
     } else {
         return (
             <React.Fragment>
@@ -70,109 +158,185 @@ function Projects(){
                     </Title>}
                     itemLayout="horizontal"
                     dataSource={data.projects}
-                    renderItem={item => (
-                        <List.Item actions={[<Button onClick={()=>{deleteButton(item.name)}} type='danger' shape='circle' icon='delete' />]}>
-                            <List.Item.Meta
-                                title={item.name}
-                            />
-                            {item.description.split('\n').map((item,key)=>{
-                                return <React.Fragment key={key}>{item}<br /></React.Fragment>
-                            })}
-                        </List.Item>
-                    )}
+                    renderItem={item => {
+                        return (
+                            <List.Item actions={[
+                                <Button type='primary' shape='circle' icon='edit'
+                                        onClick={() => history.push('project/' + item.id)}/>,
+                                <Popconfirm onConfirm={() => deleteButton(item.id)}
+                                            title='Are you sure you want to delete this project?'
+                                            okText="Yes"
+                                            cancelText="No"
+                                            placement='topLeft'
+                                >
+                                    <Button type='danger' shape='circle' icon='delete'/>
+                                </Popconfirm>
+                            ]}>
+                                <List.Item.Meta
+                                    title={item.name}
+                                />
+                                <ReactMarkdown source={item.description}/>
+                            </List.Item>
+                        )
+                    }}
                 />
             </React.Fragment>
         )
     }
 }
 
-const ADD_PROJ = gql`
-    mutation createProj($data: ProjectInput, $name: String){
-        Project(name: $name){
-            create(data: $data){
-                message
-                completed
-            }
+
+const GET_PROJ = gql`
+    query getProj($id: String!) {
+        project(projectID: $id) {
+            id
+            name
+            description
+            visible
         }
     }
 `;
 
-function CreateProject(){
-    let name, description;
+const UPDATE_PROJ = gql`
+    mutation updateProj($id:String!,$data:ProjectInput! ) {
+        Project(projectID:$id){
+            update(data:$data)
+        }
+    }
+`;
+
+const DELETE_PROJ = gql`
+    mutation deleteProj($id: String!){
+        Project(projectID: $id){
+            remove
+        }
+    }
+`;
+
+
+function Edit(props) {
+    let {id} = useParams();
+    const {loading, error, data, refetch} = useQuery(GET_PROJ, {variables: {id}});
+
+    const [changesMade, setChanges] = useState(false);
+    const [project, setProject] = useState({});
+    const [map] = useState(new Map());
+
+    const [updateProj] = useMutation(UPDATE_PROJ, {
+        refetchQueries: ['getProj']
+    });
+
+    useEffect(() => {
+        props.setSelected(['projects', 'proj_' + id]);
+        if (map.size > 0)
+            map.clear();
+        if (project && project.id !== id) {
+            refetch().then(() => setProject({})).catch(err => {
+                console.log("Error refreshing");
+            });
+        }
+    }, [id]);
+
+
+    const saveChanges = () => {
+        if (map.size === 0) {
+            message.error('No changes were made.');
+            setChanges(false);
+            return;
+        }
+        let changes = [...map.entries()].reduce((obj, [key, value]) => (obj[key] = value, obj), {});
+        updateProj({
+            variables: {
+                id: project.id,
+                data: changes,
+            }
+        }).then(() => {
+            message.success('Changes have been saved!');
+            map.clear();
+        }).catch(err => {
+            console.log("Error Updating");
+        });
+        setChanges(false);
+    };
+
+    const change = (property, value) => {
+        if (project[property] === value || (map.has(property) && map.get(property) === value))
+            return;
+        if (!changesMade)
+            setChanges(true);
+        map.set(property, value);
+    };
+
+    if (loading)
+        return (
+            <Card className='card'>
+                <Loading/>
+            </Card>
+        );
+    else if (error) {
+        message.error(error.graphQLErrors[0].message);
+        console.log(error);
+        return <Redirect to='/home'/>;
+    } else {
+        if (Object.keys(project).length === 0) {
+            setProject({...data.project});
+        }
+        return (
+            <Card className='card'>
+                <Title level={2} editable={{
+                    onChange: (text) => {
+                        change('name', text);
+                        setProject({...project, name: text});
+                    }
+                }}>
+                    {project.name}
+                </Title>
+                <Input.TextArea value={project.description} onChange={event => {
+                    setProject({...project, description: event.target.value});
+                    change('description', event.target.value);
+                }}/>
+
+                {
+                    <Button type='primary' disabled={!changesMade} onClick={saveChanges} style={{marginTop: '14px'}}>
+                        Save Changes
+                    </Button>
+
+                }
+            </Card>
+        )
+    }
+}
+
+
+const ADD_PROJ = gql`
+    mutation createProj($name: String!){
+        Project(projectID: null) {
+            create(name: $name)
+        }
+    }
+`;
+
+function CreateProject() {
+    let name;
 
     const [addProj] = useMutation(ADD_PROJ,
         {
-            refetchQueries: ['getProj']
+            refetchQueries: ['getProjs']
         });
 
-    const onSubmit = () =>{
-        if(!name || !description){
+    const onSubmit = () => {
+        name.input.value = name.input.value.trim();
+        if (!name.input.value) {
             message.error("Please fill all required fields");
         } else {
             addProj({
                 variables: {
                     name: name.input.value,
-                    data: {
-                        description: description.textAreaRef.value
-                    }
                 }
-            }).then(value => {
-                const data = value.data;
-                if(data.Project.create.completed)
-                    message.success('Project has been created!');
-                else
-                    message.error(data.Project.create.message);
-            });
-        }
-    };
-
-
-    return (
-          <Card className='spaced'>
-              <Paragraph strong>Create Project</Paragraph>
-              <Input placeholder='Name' className='space' ref={(input)=>name=input}/>
-              <Input.TextArea placeholder='Description' className='space'  ref={(input)=>description=input} rows={3}/>
-              <Button type="primary" htmlType="submit" className='space' onClick={onSubmit}>
-                  Submit
-              </Button>
-          </Card>
-    );
-}
-
-const DELETE_PROJ = gql`
-    mutation deleteProj($name: String){
-        Project(name: $name){
-            remove {
-                message
-                completed
-            }
-        }
-    }
-`;
-
-
-function DeleteProject(){
-    let name;
-
-    const [deleteProj] = useMutation(DELETE_PROJ,
-        {
-            refetchQueries: ['getProj']
-        });
-
-    const onSubmit = () =>{
-        if(!name){
-            message.error("Please fill all required fields");
-        } else {
-            deleteProj({
-                variables: {
-                    name: name.input.value,
-                }
-            }).then(value => {
-                const result = value.data.Project.remove;
-                if(result.completed)
-                    message.success('Project has been deleted!');
-                else
-                    message.error(result.message);
+            }).then(() => {
+                message.success('Project has been created!');
+            }).catch(err => {
+                message.error(err.graphQLErrors[0].message);
             });
         }
     };
@@ -180,8 +344,8 @@ function DeleteProject(){
 
     return (
         <Card className='spaced'>
-            <Paragraph strong>Delete Project</Paragraph>
-            <Input placeholder='Name' className='space' ref={(input)=>name=input}/>
+            <Paragraph strong>Create Project</Paragraph>
+            <Input placeholder='Name' className='space' ref={(input) => name = input}/>
             <Button type="primary" htmlType="submit" className='space' onClick={onSubmit}>
                 Submit
             </Button>
@@ -189,17 +353,18 @@ function DeleteProject(){
     );
 }
 
-function Home(){
+function Home(props) {
+    useEffect(() => {
+        props.setSelected(['home'])
+    }, []);
 
     return (
         <React.Fragment>
             <Card className='card'>
-                <PageHeader onBack={() => history.push('/')} title="Home" subTitle="Main Admin Page" >
-                    <Projects />
-                    <br />
-                    <CreateProject />
-                    <br />
-                    <DeleteProject />
+                <PageHeader title="Home" subTitle="Manage Projects Here">
+                    <Projects/>
+                    <br/>
+                    <CreateProject/>
                 </PageHeader>
             </Card>
         </React.Fragment>

@@ -4,11 +4,12 @@ import queryString from "query-string";
 import PropTypes from 'prop-types';
 import ApolloClient, {gql, InMemoryCache} from "apollo-boost";
 import {useQuery} from '@apollo/react-hooks';
-import {Button, Card, Col, message, Row, Spin} from 'antd';
+import {Button, Card, Checkbox, Col, message, Row, Spin} from 'antd';
 import history from '../History';
 import { Typography } from 'antd';
 import Loading from "../Components/Loading";
-
+import {createButton, createSvgIcon, GithubLoginButton} from 'react-social-login-buttons'
+import discordIcon from '../assets/discord-logo.svg'
 const { Text, Title } = Typography;
 
 export const SITE_LOC = "http://localhost:5000";
@@ -27,25 +28,34 @@ export const GraphQLClient = new ApolloClient({
     }
 });
 
+export const DiscordLoginButton = createButton(
+    {
+        icon: createSvgIcon((size)=><img src={discordIcon} style={size}/>),
+        style: { background: "#7289DA" },
+        activeStyle: { background: "#5970C1" }
+    }
+);
 
 
 class Api {
     public baseUrl = SITE_LOC;
     private data = {};
     private jwt : String = localStorage.getItem('token');
+    public loginLoc: string;
 
     constructor(){
         if(this.jwt){
             this.validate().then(res=>{
                 if(res === false){
                     this.logout();
+                } else if(history.location.pathname === '/') {
+                    history.replace('/home');
                 }
             }).catch(err=>{
                 console.log("Error validating token, logging out.");
                 this.logout();
             })
         }
-
 
     }
 
@@ -63,27 +73,73 @@ class Api {
 
     public LoginComponent = withRouter(({location,history}) => this.LoginComponentFunc(location,history));
 
+    private readonly errors = {
+        "1": "You must create an account before you can log in.",
+    };
+
     private LoginComponentFunc(location,history){
         let query = queryString.parse(location.search);
-        if(query.token){
+        let signUp = location.pathname === '/signup';
+        let [tos, setTos] = useState(!signUp);
+        let [errorDisplayed, setED] = useState(false);
+
+        let login = (service)=> {
+            if(tos){
+                window.open(this.serviceUrl(service,signUp),'_self');
+            } else {
+                message.error("You must agree to the terms and conditions before continuing.")
+            }
+        };
+
+        if(query.token && !signUp) {
             this.setToken(query.token, true);
-            history.push(query.redirect);
-        } else {
-            this.login();
+            history.push(this.loginLoc == null ? '/home' : this.loginLoc);
+            this.loginLoc = null;
         }
 
+        if(query.error && !errorDisplayed){
+            message.error(this.errors[query.error.toString()]);
+            setED(true);
+        }
+
+
         return (
-            <React.Fragment />
+            <Card className='card'>
+                <div style={{margin: "0 auto", width: '400px'}}>
+                    <Title style={{textAlign: 'center'}}>
+                        {
+                            signUp ? "Sign Up" : "Log In"
+                        }
+                    </Title>
+                <GithubLoginButton text={(signUp ? 'Sign Up' : 'Login') + ' With Github'} onClick={()=>login('github')} />
+                <DiscordLoginButton text={(signUp ? 'Sign Up' : 'Login') + ' With Discord'} onClick={()=>login('discord')} />
+                    {
+                        signUp &&
+                            <Checkbox onChange={e=>setTos(e.target.checked)} style={{margin: '5px'}}>
+                                I agree to the <a href={'/tos'}>terms and conditions</a>.
+                            </Checkbox>
+
+                    }
+                </div>
+            </Card>
         );
     }
 
+    private serviceUrl(service : string, signUp : boolean) : string {
+        return SITE_LOC + '/api/auth/login?service=' + service + (signUp ? '&signUp=true' : '');
+    }
+
     login() {
-        window.open(this.baseUrl + "/api/auth/login?redirect=" + history.location.pathname,"_self");
+        if(history.location.pathname == '/login')
+            this.loginLoc = null;
+        else
+            this.loginLoc = history.location.pathname;
+        history.push('/login');
     }
 
     logout(){
         this.clearToken(true);
-        GraphQLClient.resetStore().then(()=>history.push('/'));
+        GraphQLClient.resetStore().then(()=>history.push('/login'));
         console.log("Logging Out");
     }
 
@@ -109,32 +165,32 @@ class Api {
 export const AuthApi = new Api();
 
 export const AuthLevel = {
-    MEMBER: 'MEMBER',
-    ADMIN: 'ADMIN'
+    USER: 'USER',
+    GUEST: 'GUEST'
 };
 
 const LevelQuery = gql`
-    query getRoles {
+    query getRole {
         me {
-            roles
+            role
         }
     }
 `;
 
-const RolesContext = React.createContext({status: 'ERROR', roles:[]});
+const RoleContext = React.createContext({status: 'ERROR', role:'GUEST'});
 
-export const GetRoles = RolesContext.Consumer;
+export const GetRole = RoleContext.Consumer;
 
 export function LevelManager(props){
     const {loading, error, data} = useQuery(LevelQuery);
     const [errorDisplayed, setErrorDisplayed] = useState(false);
-    let value = {status: 'LOADING', roles: []};
+    let value = {status: 'LOADING', role: ''};
     if(!loading) {
         if(error)
             value.status = 'ERROR';
         else {
             value.status = 'SUCCESS';
-            value.roles = data.me.roles;
+            value.role = data.me.role;
         }
     }
 
@@ -149,19 +205,19 @@ export function LevelManager(props){
         setErrorDisplayed(false);
     }
 
-    return (<RolesContext.Provider value={value}>
+    return (<RoleContext.Provider value={value}>
         {props.children}
-    </RolesContext.Provider>);
+    </RoleContext.Provider>);
 }
 
 export function LevelCheck(props) {
-    return <GetRoles children={({roles, status})=>{
+    return <GetRole children={({role, status})=>{
         if(status === 'LOADING'){
             return (
                 <Loading />
             );
         }
-        if(roles.includes(props.level))
+        if(role === props.level)
             return props.children;
         else if(props.redirect)
             AuthApi.login();
@@ -178,11 +234,11 @@ export function LevelCheck(props) {
     }}/>;
 }
 
-LevelCheck.context = RolesContext;
+LevelCheck.context = RoleContext;
 
 LevelCheck.propTypes = {
     level: PropTypes.oneOf(Object.values(AuthLevel)).isRequired,
-    children: PropTypes.element.isRequired,
+    children: PropTypes.any.isRequired,
     NoPermission: PropTypes.element,
     redirect: PropTypes.bool,
 };
