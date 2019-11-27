@@ -1,47 +1,43 @@
-const { ApolloServer, gql } = require('apollo-server-express');
+const {User} = require("../role");
+const dbm = require('../database');
+const {ApolloServer, gql, AuthenticationError} = require('apollo-server-express');
 const {buildSchema} = require('graphql');
 const token = require('./token');
-const {ProjectList, createProject, deleteProject, updateProject, projectArray, ProjectData} = require('../data-manager');
+const {ProjectManager, AccountManager} = require('../data-manager');
+const ObjectId = require('mongodb').ObjectId;
+const {Role, Permission} = require('../role');
 
 const typeDefs = gql`
-    # Comments in GraphQL strings (such as this one) start with the hash (#) symbol.
-
-    # This "Book" type defines the queryable fields for every book in our data source.
-    type Book {
-        title: String
-        author: String
-    }
-
-    type Status {
-        completed: Boolean!
-        message: String
-    }
 
     type User {
         name: String
         id: ID
         avatarUrl: String
-        roles: [Role!]!
+        role: Role!
     }
 
     enum Role {
-        MEMBER,
-        ADMIN
+        USER,
+        GUEST
     }
 
     input ProjectInput {
+        name: String
         description: String
+        visible: Boolean
     }
 
     type ProjectData {
-        name: String
+        id: String!
+        name: String!
         description: String
+        visible: Boolean!
     }
 
     type ProjectOps {
-        create(data : ProjectInput) : Status!
-        update(data : ProjectInput) : Status!
-        remove : Status!
+        create(name: String!) : Boolean!
+        update(data : ProjectInput!) : Boolean!
+        remove : Boolean!
     }
 
     # The "Query" type is special: it lists all of the available queries that
@@ -50,70 +46,100 @@ const typeDefs = gql`
     type Query {
         me: User!
         projects: [ProjectData!]!
+        project(projectID: String!) : ProjectData
     }
 
 
     type Mutation {
-        Project(name: String) : ProjectOps
+        Project(projectID: String) : ProjectOps
     }
 `;
 
 const resolvers = {
     Mutation: {
-        Project: (parent, args, context) =>{
-            if(!context.user.roles.includes('ADMIN')){
-                return null;
-            }
-            return ({name: args.name});
+        Project: (parent, args, context) => {
+            return ({hasProjectID: (args.projectID), ...args});
         }
 
     },
     Query: {
-        me: (parent, args, context) =>{
-            return context.user;
+        me: () => {
+            return {};
         },
-        projects: ()=> {
-            return projectArray();
+        projects: (parent, args, context) => {
+            return ProjectManager.get(context.id, context.role.has(Permission.VIEW_ALL_PROJECTS));
         },
+        project: (parent, args, context) => {
+            return ProjectManager.getOne(context.id, args.projectID, context.role.has(Permission.VIEW_ALL_PROJECTS))
+        }
     },
     User: {
-        avatarUrl: (parent, args, context) => {
-            if(context.user.roles.includes('MEMBER')){
-                return `https://cdn.discordapp.com/avatars/${context.user.id}/${context.user.avatar}.png`;
-            }
-            else return null;
+        name: async (parent, args, context) => {
+            let result = await AccountManager.getProperties(context.id,['avatar']);
+            return result.name;
+        },
+        avatarUrl: async (parent, args, context) => {
+            let result = await AccountManager.getProperties(context.id,['avatar']);
+            return result.avatar;
+        },
+        role: (parent, args, context) => {
+            return context.role.name;
+        },
+        id: (parent, args, context) => {
+            return context.id.toHexString();
         }
     },
     ProjectOps: {
         create: (parent, args, context) => {
-            return createProject(parent.name, new ProjectData(args.data.description));
+            if(!context.role.has(Permission.CREATE_PROJECT))
+                throw new AuthenticationError('You cannot perform this action.');
+            return ProjectManager.create(context.id, args.name);
         },
         remove: (parent, args, context) => {
-            return deleteProject(parent.name);
+            if(!context.role.has(Permission.DELETE_PROJECT))
+                throw new AuthenticationError('You cannot perform this action.');
+            if(!parent.hasProjectID)
+                throw new Error('Invalid Request');
+            return ProjectManager.delete(context.id, parent.projectID);
         },
-        update: (parent, args, context) =>{
-            return updateProject(parent.name, new ProjectData(args.data.description));
+        update: (parent, args, context) => {
+            if(!context.role.has(Permission.UPDATE_PROJECT))
+                throw new AuthenticationError('You cannot perform this action.');
+            if(!parent.hasProjectID)
+                throw new Error('Invalid Request');
+            return ProjectManager.update(context.id, parent.projectID, {...args.data});
         }
-    },
-    ProjectData: (parent, args, context) =>{
-        console.log(parent,args,context);
-        return null;
     }
 };
 
-const server = new ApolloServer({ typeDefs, resolvers, context: ({req})=>{
-        if(req.headers.authorization) {
-            try{
-                let userVals = token.verify(req.headers.authorization);
-                let roles = ['MEMBER'];
-                if(userVals.id === '217015504932438026')
-                    roles.push('ADMIN');
-                return {user: {roles,...userVals}};
-            } catch(e) {
-                console.log(e);
-            }
+
+const server = new ApolloServer({
+    typeDefs, resolvers, context: ({req}) => {
+        //ID Grab + Authentication Check
+        let id, authenticated = false;
+        if (req.headers.identity) {
+            id = req.headers.identity;
         }
-        return {user: {roles: [], permissionLevel: 0}};
-    }});
+        if (req.headers.authorization) {
+            let userVals = token.verify(req.headers.authorization);
+            id = userVals.id;
+            authenticated = true;
+        } else {
+            throw new AuthenticationError("Must either have an identity or authorization token.");
+        }
+
+        if(!dbm.isConnected()){
+            throw Error('Database Not Online');
+        }
+
+        // Valid OID Check
+        let oid = new ObjectId(id);
+        if (oid.toHexString() !== id || !AccountManager.has(oid)) {
+            throw new AuthenticationError('Invalid ID')
+        }
+        return new User(oid, authenticated ? Role.USER : Role.GUEST);
+    }
+});
 
 module.exports = server;
+
