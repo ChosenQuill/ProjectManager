@@ -22,17 +22,15 @@ const typeDefs = gql`
     }
 
     input ProjectInput {
-        description: String
-        slug: String
-        visible: Boolean
         name: String
+        description: String
+        visible: Boolean
     }
 
     type ProjectData {
         id: String!
         name: String!
         description: String
-        slug: String!
         visible: Boolean!
     }
 
@@ -72,12 +70,13 @@ const resolvers = {
             return ProjectManager.get(context.id, context.role.has(Permission.VIEW_ALL_PROJECTS));
         },
         project: (parent, args, context) => {
-            return ProjectManager.getOne(context.id, args.projectID, context.role.equals(Role.USER))
+            return ProjectManager.getOne(context.id, args.projectID, context.role.has(Permission.VIEW_ALL_PROJECTS))
         }
     },
     User: {
-        name: (parent, args, context) => {
-            return "Some name"
+        name: async (parent, args, context) => {
+            let result = await AccountManager.getProperties(context.id,['avatar']);
+            return result.name;
         },
         avatarUrl: async (parent, args, context) => {
             let result = await AccountManager.getProperties(context.id,['avatar']);
