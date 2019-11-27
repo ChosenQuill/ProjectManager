@@ -101,7 +101,6 @@ class ProjectManager {
                     projects: {
                         id: shortid.generate(),
                         name,
-                        slug: slugify(name),
                         visible: false
                     }
                 }
@@ -129,16 +128,16 @@ class ProjectManager {
         return true;
     }
 
-    async update(accountID: ObjectID, projectID: string, project: Object): Promise<boolean> {
+    async update(accountID: ObjectID, projectID: string, project: any): Promise<boolean> {
         let projChanges = {};
         Object.keys(project).forEach((key) => {
             projChanges['projects.$.' + key] = project[key];
         });
         let results = await accounts.updateOne({
             '_id': accountID,
-            'project.id': projectID
+            'projects.id': projectID
         }, {
-            $push: {
+            $set: {
                 ...projChanges
             }
         });

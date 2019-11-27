@@ -48,7 +48,7 @@ class Api {
             this.validate().then(res=>{
                 if(res === false){
                     this.logout();
-                } else {
+                } else if(history.location.pathname === '/') {
                     history.replace('/home');
                 }
             }).catch(err=>{
@@ -81,6 +81,8 @@ class Api {
         let query = queryString.parse(location.search);
         let signUp = location.pathname === '/signup';
         let [tos, setTos] = useState(!signUp);
+        let [errorDisplayed, setED] = useState(false);
+
         let login = (service)=> {
             if(tos){
                 window.open(this.serviceUrl(service,signUp),'_self');
@@ -95,9 +97,9 @@ class Api {
             this.loginLoc = null;
         }
 
-        if(query.error){
-            // message.error(this.errors[query.error.toString()]);
-            // Finish
+        if(query.error && !errorDisplayed){
+            message.error(this.errors[query.error.toString()]);
+            setED(true);
         }
 
 
@@ -137,7 +139,7 @@ class Api {
 
     logout(){
         this.clearToken(true);
-        GraphQLClient.resetStore().then(()=>history.push('/'));
+        GraphQLClient.resetStore().then(()=>history.push('/login'));
         console.log("Logging Out");
     }
 
