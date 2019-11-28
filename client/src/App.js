@@ -11,6 +11,7 @@ import {ApolloProvider} from '@apollo/react-hooks';
 import {AuthApi, GraphQLClient, LevelManager} from './Auth';
 import Manager from './Pages/Manager';
 import Intro from "./Pages/Intro";
+import Profile from "./Components/Profile";
 
 const {Paragraph, Title, Text} = Typography;
 const {Header, Content, Footer, Sider} = Layout;
@@ -30,6 +31,7 @@ class App extends React.Component {
                                 SUREDROID
                             </span>
                         </a>
+                        <Profile />
                     </Header>
                     <Layout>
                         <Switch>
@@ -38,7 +40,7 @@ class App extends React.Component {
                             <Route path={['/login','/signup']} component={AuthApi.LoginComponent}/>
                             {/*---- ToDo (Billing, Pricing) ----*/}
                             <Route path='/pricing' />
-                            
+
                             <Route path='/tos' component={Tos}/>
                             <Route path='/terms' render={()=><Redirect to='/tos' />}/>
 
