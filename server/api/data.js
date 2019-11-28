@@ -60,10 +60,11 @@ const resolvers = {
         Project: (parent, args, context) => {
             return ({hasProjectID: (args.projectID), ...args});
         }
-
     },
     Query: {
-        me: () => {
+        me: (parent,args,context) => {
+            if(!context.role.has(Permission.ACCESS_PROFILE))
+                throw new AuthenticationError('You cannot perform this action.');
             return {};
         },
         projects: (parent, args, context) => {
@@ -114,7 +115,7 @@ const resolvers = {
 
 
 const server = new ApolloServer({
-    typeDefs, resolvers, context: ({req}) => {
+    typeDefs, resolvers, context: async ({req}) => {
         //ID Grab + Authentication Check
         let id, authenticated = false;
         if (req.headers.identity) {
@@ -134,8 +135,8 @@ const server = new ApolloServer({
 
         // Valid OID Check
         let oid = new ObjectId(id);
-        if (oid.toHexString() !== id || !AccountManager.has(oid)) {
-            throw new AuthenticationError('Invalid ID')
+        if (oid.toHexString() !== id || !await AccountManager.has(oid)) {
+            throw new AuthenticationError('Invalid ID');
         }
         return new User(oid, authenticated ? Role.USER : Role.GUEST);
     }
