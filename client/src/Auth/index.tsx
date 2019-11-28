@@ -6,11 +6,12 @@ import ApolloClient, {gql, InMemoryCache} from "apollo-boost";
 import {useQuery} from '@apollo/react-hooks';
 import {Button, Card, Checkbox, Col, message, Row, Spin} from 'antd';
 import history from '../History';
-import { Typography } from 'antd';
+import {Typography} from 'antd';
 import Loading from "../Components/Loading";
 import {createButton, createSvgIcon, GithubLoginButton} from 'react-social-login-buttons'
 import discordIcon from '../assets/discord-logo.svg'
-const { Text, Title } = Typography;
+
+const {Text, Title} = Typography;
 
 export const SITE_LOC = process.env.REACT_APP_SITE_LOC;
 
@@ -30,27 +31,27 @@ export const GraphQLClient = new ApolloClient({
 
 export const DiscordLoginButton = createButton(
     {
-        icon: createSvgIcon((size)=><img src={discordIcon} style={size}/>),
-        style: { background: "#7289DA" },
-        activeStyle: { background: "#5970C1" }
+        icon: createSvgIcon((size) => <img src={discordIcon} style={size}/>),
+        style: {background: "#7289DA"},
+        activeStyle: {background: "#5970C1"}
     }
 );
 
 
 class Api {
     public baseUrl = SITE_LOC;
-    private jwt : String = localStorage.getItem('token');
+    private jwt: String = localStorage.getItem('token');
     public loginLoc: string;
 
-    constructor(){
-        if(this.jwt){
-            this.validate().then(res=>{
-                if(res === false){
+    constructor() {
+        if (this.jwt) {
+            this.validate().then(res => {
+                if (res === false) {
                     this.logout();
-                } else if(history.location.pathname === '/') {
+                } else if (history.location.pathname === '/') {
                     history.replace('/home');
                 }
-            }).catch(err=>{
+            }).catch(err => {
                 console.log("Error validating token, logging out.");
                 this.logout();
             })
@@ -58,8 +59,8 @@ class Api {
 
     }
 
-    async validate() : Promise<Boolean> {
-        if(!this.jwt)
+    async validate(): Promise<Boolean> {
+        if (!this.jwt)
             return false;
         try {
             let res = await fetch(this.baseUrl + '/auth/validate?token=' + this.jwt);
@@ -70,33 +71,33 @@ class Api {
         }
     }
 
-    public LoginComponent = withRouter(({location,history}) => this.LoginComponentFunc(location,history));
+    public LoginComponent = withRouter(({location, history}) => this.LoginComponentFunc(location, history));
 
     private readonly errors = {
         "1": "You must create an account before you can log in.",
     };
 
-    private LoginComponentFunc(location,history){
+    private LoginComponentFunc(location, history) {
         let query = queryString.parse(location.search);
         let signUp = location.pathname === '/signup';
         let [tos, setTos] = useState(!signUp);
         let [errorDisplayed, setED] = useState(false);
 
-        let login = (service)=> {
-            if(tos){
-                window.open(this.serviceUrl(service,signUp),'_self');
+        let login = (service) => {
+            if (tos) {
+                window.open(this.serviceUrl(service, signUp), '_self');
             } else {
                 message.error("You must agree to the terms and conditions before continuing.")
             }
         };
 
-        if(query.token && !signUp) {
+        if (query.token && !signUp) {
             this.setToken(query.token, true);
             history.push(this.loginLoc == null ? '/home' : this.loginLoc);
             this.loginLoc = null;
         }
 
-        if(query.error && !errorDisplayed){
+        if (query.error && !errorDisplayed) {
             message.error(this.errors[query.error.toString()]);
             setED(true);
         }
@@ -110,13 +111,15 @@ class Api {
                             signUp ? "Sign Up" : "Log In"
                         }
                     </Title>
-                <GithubLoginButton text={(signUp ? 'Sign Up' : 'Login') + ' With Github'} onClick={()=>login('github')} />
-                <DiscordLoginButton text={(signUp ? 'Sign Up' : 'Login') + ' With Discord'} onClick={()=>login('discord')} />
+                    <GithubLoginButton text={(signUp ? 'Sign Up' : 'Login') + ' With Github'}
+                                       onClick={() => login('github')}/>
+                    <DiscordLoginButton text={(signUp ? 'Sign Up' : 'Login') + ' With Discord'}
+                                        onClick={() => login('discord')}/>
                     {
                         signUp &&
-                            <Checkbox onChange={e=>setTos(e.target.checked)} style={{margin: '5px'}}>
-                                I agree to the <a href={'/tos'}>terms and conditions</a>.
-                            </Checkbox>
+                        <Checkbox onChange={e => setTos(e.target.checked)} style={{margin: '5px'}}>
+                            I agree to the <a href={'/tos'}>terms and conditions</a>.
+                        </Checkbox>
 
                     }
                 </div>
@@ -124,38 +127,38 @@ class Api {
         );
     }
 
-    private serviceUrl(service : string, signUp : boolean) : string {
+    private serviceUrl(service: string, signUp: boolean): string {
         return SITE_LOC + '/auth/login?service=' + service + (signUp ? '&signUp=true' : '');
     }
 
     login() {
-        if(history.location.pathname == '/login')
+        if (history.location.pathname == '/login')
             this.loginLoc = null;
         else
             this.loginLoc = history.location.pathname;
         history.push('/login');
     }
 
-    logout(){
+    logout() {
         this.clearToken(true);
-        GraphQLClient.resetStore().then(()=>history.push('/login'));
+        GraphQLClient.resetStore().then(() => history.push('/login'));
         console.log("Logging Out");
     }
 
-    setToken(token, store){
-        if(store)
+    setToken(token, store) {
+        if (store)
             localStorage.setItem('token', token);
         this.jwt = token;
 
     }
 
-    clearToken(store){
-        if(store)
+    clearToken(store) {
+        if (store)
             localStorage.removeItem('token');
         this.jwt = null;
     }
 
-    getToken(){
+    getToken() {
         return this.jwt;
     }
 
@@ -176,16 +179,16 @@ const LevelQuery = gql`
     }
 `;
 
-const RoleContext = React.createContext({status: 'ERROR', role:'GUEST'});
+const RoleContext = React.createContext({status: 'ERROR', role: 'GUEST'});
 
 export const GetRole = RoleContext.Consumer;
 
-export function LevelManager(props){
+export function LevelManager(props) {
     const {loading, error, data} = useQuery(LevelQuery);
     const [errorDisplayed, setErrorDisplayed] = useState(false);
     let value = {status: 'LOADING', role: ''};
-    if(!loading) {
-        if(error)
+    if (!loading) {
+        if (error)
             value.status = 'ERROR';
         else {
             value.status = 'SUCCESS';
@@ -193,15 +196,15 @@ export function LevelManager(props){
         }
     }
 
-    if(error && !errorDisplayed){
+    if (error && !errorDisplayed) {
         console.log("DataConnection Error: " + error);
         console.log(JSON.stringify(error));
-        if(error.message == "Network error: Failed to fetch")
-            message.error("There was an issue connecting you to our servers.",10);
+        if (error.message == "Network error: Failed to fetch")
+            message.error("There was an issue connecting you to our servers.", 10);
         else
-            message.error("There was an error authenticating you.",10);
+            message.error("There was an error authenticating you.", 10);
         setErrorDisplayed(true);
-    } else if (errorDisplayed && !error){
+    } else if (errorDisplayed && !error) {
         setErrorDisplayed(false);
     }
 
@@ -211,23 +214,23 @@ export function LevelManager(props){
 }
 
 export function LevelCheck(props) {
-    return <GetRole children={({role, status})=>{
-        if(status === 'LOADING'){
+    return <GetRole children={({role, status}) => {
+        if (status === 'LOADING') {
             return (
-                <Loading />
+                <Loading/>
             );
         }
-        if(role === props.level)
+        if (role === props.level)
             return props.children;
-        else if(props.redirect)
+        else if (props.redirect)
             AuthApi.login();
-        else if(props.NoPermission)
-            return (<props.NoPermission />);
+        else if (props.NoPermission)
+            return (<props.NoPermission/>);
         else return (
                 <Row>
-                    <Col style={{textAlign:'center'}}>
+                    <Col style={{textAlign: 'center'}}>
                         <Title level={2}>You do not have permission to view this.</Title>
-                        <Button type='primary' size='large' onClick={()=>AuthApi.login()}>Login</Button>
+                        <Button type='primary' size='large' onClick={() => AuthApi.login()}>Login</Button>
                     </Col>
                 </Row>
             );

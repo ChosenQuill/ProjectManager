@@ -12,7 +12,7 @@ app.use(cors());
 
 // Routes
 app.use('/auth', require('./api/auth').router);
-app.use('/auth',(err, req, res, next) => {
+app.use('/auth', (err, req, res, next) => {
     switch (err.message) {
         case 'NoCodeProvided' || 'NoTokenProvided':
             return res.status(400).send({
@@ -25,7 +25,7 @@ app.use('/auth',(err, req, res, next) => {
                 error: err.message + " | " + "Not Authorized to perform this request."
             });
         default:
-            console.log(err)
+            console.log(err);
             return res.status(500).send({
                 status: 'ERROR',
                 error: err.message,
@@ -44,7 +44,7 @@ app.listen(5000, () => {
 });
 
 // If the Node process ends, close the Mongoose connection
-process.on('SIGINT', function() {
+process.on('SIGINT', function () {
     client.close(function () {
         console.log('Server default connection disconnected through app termination');
         process.exit(0);
