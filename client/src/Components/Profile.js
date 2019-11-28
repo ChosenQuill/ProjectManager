@@ -1,7 +1,7 @@
 import React from "react";
 import './Profile.scss';
 import {AuthApi} from "../Auth";
-import {useQuery} from "@apollo/react-hooks";
+import {gql} from 'apollo-boost';
 
 const GET_PROFILE = gql`
     query getProfile {
@@ -20,9 +20,7 @@ function Profile() {
     }
     return (
         <div className='box'>
-            {
-                Test
-            }
+            TEST
         </div>
     );
 }

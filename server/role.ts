@@ -1,4 +1,4 @@
-import { ObjectId } from "mongodb";
+import {ObjectId} from "mongodb";
 
 const Permission = {
     //Projects
@@ -12,16 +12,17 @@ const Permission = {
 };
 
 class Role {
-    public static GUEST : Role = new Role('GUEST', [Permission.VIEW_PUBLIC_PROJECTS]);
-    public static USER : Role = new Role('USER',[Permission.CREATE_PROJECT,Permission.DELETE_PROJECT,Permission.UPDATE_PROJECT,Permission.VIEW_ALL_PROJECTS,Permission.VIEW_PUBLIC_PROJECTS, Permission.ACCESS_PROFILE]);
+    public static GUEST: Role = new Role('GUEST', [Permission.VIEW_PUBLIC_PROJECTS]);
+    public static USER: Role = new Role('USER', [Permission.CREATE_PROJECT, Permission.DELETE_PROJECT, Permission.UPDATE_PROJECT, Permission.VIEW_ALL_PROJECTS, Permission.VIEW_PUBLIC_PROJECTS, Permission.ACCESS_PROFILE]);
 
     public readonly name: string;
     private permissions: string[];
 
-    private constructor(name : string, permissions: string[]) {
+    private constructor(name: string, permissions: string[]) {
         this.name = name;
         this.permissions = permissions;
     }
+
     public has(permission: string) {
         return this.permissions.includes(permission);
     }
@@ -32,10 +33,10 @@ class Role {
 }
 
 class User {
-    public readonly id : ObjectId;
-    public readonly role : Role;
+    public readonly id: ObjectId;
+    public readonly role: Role;
 
-    public constructor(id: ObjectId, role: Role){
+    public constructor(id: ObjectId, role: Role) {
         this.id = id;
         this.role = role;
     }

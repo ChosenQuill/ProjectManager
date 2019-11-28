@@ -62,8 +62,8 @@ const resolvers = {
         }
     },
     Query: {
-        me: (parent,args,context) => {
-            if(!context.role.has(Permission.ACCESS_PROFILE))
+        me: (parent, args, context) => {
+            if (!context.role.has(Permission.ACCESS_PROFILE))
                 throw new AuthenticationError('You cannot perform this action.');
             return {};
         },
@@ -76,11 +76,11 @@ const resolvers = {
     },
     User: {
         name: async (parent, args, context) => {
-            let result = await AccountManager.getProperties(context.id,['avatar']);
+            let result = await AccountManager.getProperties(context.id, ['avatar']);
             return result.name;
         },
         avatarUrl: async (parent, args, context) => {
-            let result = await AccountManager.getProperties(context.id,['avatar']);
+            let result = await AccountManager.getProperties(context.id, ['avatar']);
             return result.avatar;
         },
         role: (parent, args, context) => {
@@ -92,21 +92,21 @@ const resolvers = {
     },
     ProjectOps: {
         create: (parent, args, context) => {
-            if(!context.role.has(Permission.CREATE_PROJECT))
+            if (!context.role.has(Permission.CREATE_PROJECT))
                 throw new AuthenticationError('You cannot perform this action.');
             return ProjectManager.create(context.id, args.name);
         },
         remove: (parent, args, context) => {
-            if(!context.role.has(Permission.DELETE_PROJECT))
+            if (!context.role.has(Permission.DELETE_PROJECT))
                 throw new AuthenticationError('You cannot perform this action.');
-            if(!parent.hasProjectID)
+            if (!parent.hasProjectID)
                 throw new Error('Invalid Request');
             return ProjectManager.delete(context.id, parent.projectID);
         },
         update: (parent, args, context) => {
-            if(!context.role.has(Permission.UPDATE_PROJECT))
+            if (!context.role.has(Permission.UPDATE_PROJECT))
                 throw new AuthenticationError('You cannot perform this action.');
-            if(!parent.hasProjectID)
+            if (!parent.hasProjectID)
                 throw new Error('Invalid Request');
             return ProjectManager.update(context.id, parent.projectID, {...args.data});
         }
@@ -129,7 +129,7 @@ const server = new ApolloServer({
             throw new AuthenticationError("Must either have an identity or authorization token.");
         }
 
-        if(!dbm.isConnected()){
+        if (!dbm.isConnected()) {
             throw Error('Database Not Online');
         }
 

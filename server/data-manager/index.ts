@@ -191,7 +191,7 @@ class ProjectManager {
                 }
             }
         );
-        if(!result.projects || (!isAuth && !result.projects[0].visible))
+        if (!result.projects || (!isAuth && !result.projects[0].visible))
             throw new Error('Project does not exist.');
 
         return result.projects[0];
