@@ -1,8 +1,5 @@
 import {Db} from "mongodb";
 
-// const {Db} = require("mongodb");
-
-
 const MongoClient = require('mongodb').MongoClient;
 
 const url = 'mongodb://localhost:27017';

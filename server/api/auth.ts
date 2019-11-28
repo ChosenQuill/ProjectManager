@@ -1,5 +1,4 @@
-import {Collection, Db} from "mongodb";
-import {AuthorizationTokenConfig, ModuleOptions, OAuthClient} from "simple-oauth2";
+import {ModuleOptions, OAuthClient} from "simple-oauth2";
 import {AccountInfo} from '../data-manager';
 
 const express = require('express');
@@ -9,14 +8,13 @@ const token = require('./token');
 const cookieParser = require('cookie-parser');
 const fs = require('fs');
 const oauth = require('simple-oauth2');
-const {onceConnected} = require('../database');
 const {AccountManager} = require('../data-manager');
 
 const authTokens = JSON.parse(fs.readFileSync('./oauth.json').toString());
 export const router = express.Router();
 const SITE_LOC = process.env.SITE_LOC;
+const BACKEND_LOC = process.env.BACKEND_LOC;
 
-const redirect = encodeURIComponent('http://localhost:5000/api/auth/callback');
 
 // Router
 router.use(cookieParser());
@@ -46,7 +44,7 @@ export class AuthService<ClientIdName extends string = 'client_id'> {
         this.client = oauth.create(options);
         this.scopes = scopes;
         this.name = name;
-        this.callbackUrl = `http://localhost:5000/api/auth/${name}/callback`;
+        this.callbackUrl = `${BACKEND_LOC}/auth/${name}/callback`;
         this.extractInfo = extractInfo;
         this.redirectUrl = this.client.authorizationCode.authorizeURL({
             redirect_uri: this.callbackUrl,
@@ -63,7 +61,7 @@ export class AuthService<ClientIdName extends string = 'client_id'> {
                 try {
                     const result = await this.client.authorizationCode.getToken({
                         code: code,
-                        redirect_uri: `http://localhost:5000/api/auth/${name}/callback`
+                        redirect_uri: this.callbackUrl
                     });
                     if (result.error) {
                         next(Error(result.error));
@@ -81,7 +79,7 @@ export class AuthService<ClientIdName extends string = 'client_id'> {
                     if (!identity.id) {
                         next(Error('Invalid Request'));
                     }
-                    console.log(identity);
+
                     let account;
                     if (req.cookies.signUp) {
                         account = await AccountManager.create(this, identity);
@@ -90,11 +88,11 @@ export class AuthService<ClientIdName extends string = 'client_id'> {
                     }
 
                     if (!account) {
-                        res.redirect(SITE_LOC + 'signup?error=1');
+                        res.status(200).redirect(SITE_LOC + '/signup?error=1');
                         return;
                     }
                     let jwt = token.encrypt({id: account});
-                    res.status(200).redirect(SITE_LOC + 'login?token=' + jwt);
+                    res.status(200).redirect(SITE_LOC + '/login?token=' + jwt);
                 } catch (e) {
                     next(e);
                 }

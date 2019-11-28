@@ -12,11 +12,11 @@ import {createButton, createSvgIcon, GithubLoginButton} from 'react-social-login
 import discordIcon from '../assets/discord-logo.svg'
 const { Text, Title } = Typography;
 
-export const SITE_LOC = "http://localhost:5000";
+export const SITE_LOC = process.env.REACT_APP_SITE_LOC;
 
 
 export const GraphQLClient = new ApolloClient({
-    uri: SITE_LOC + '/api/data/',
+    uri: SITE_LOC + '/data/',
     cache: new InMemoryCache(),
     request: (operation) => {
         const token = localStorage.getItem('token');
@@ -39,7 +39,6 @@ export const DiscordLoginButton = createButton(
 
 class Api {
     public baseUrl = SITE_LOC;
-    private data = {};
     private jwt : String = localStorage.getItem('token');
     public loginLoc: string;
 
@@ -63,7 +62,7 @@ class Api {
         if(!this.jwt)
             return false;
         try {
-            let res = await fetch(this.baseUrl + '/api/auth/validate?token=' + this.jwt);
+            let res = await fetch(this.baseUrl + '/auth/validate?token=' + this.jwt);
             return res.status === 200;
         } catch (err) {
             console.log(err);
@@ -126,7 +125,7 @@ class Api {
     }
 
     private serviceUrl(service : string, signUp : boolean) : string {
-        return SITE_LOC + '/api/auth/login?service=' + service + (signUp ? '&signUp=true' : '');
+        return SITE_LOC + '/auth/login?service=' + service + (signUp ? '&signUp=true' : '');
     }
 
     login() {
@@ -196,6 +195,7 @@ export function LevelManager(props){
 
     if(error && !errorDisplayed){
         console.log("DataConnection Error: " + error);
+        console.log(JSON.stringify(error));
         if(error.message == "Network error: Failed to fetch")
             message.error("There was an issue connecting you to our servers.",10);
         else
@@ -243,7 +243,3 @@ LevelCheck.propTypes = {
     redirect: PropTypes.bool,
 };
 
-// export function GetLevels(props) {
-//     if(props.)
-// }
-// GetLevels.context = Roles;
