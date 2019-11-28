@@ -2,6 +2,10 @@
 
 .header {
     background-color: #fff;
+    display: flex;
+    justify-content: flex-start;
+    flex-direction: row;
+    width: 100%;
     /*position: sticky;*/
 }
 
@@ -20,31 +24,32 @@
 .logoText {
     margin-left: 20px;
     font: 230% BEYNO;
-    margin-top: -6px;
+    margin-top: 8px;
 }
 
 /*Global StyleSheet*/
 
 .link{
     position: relative;
-}
 
-.link:after{
-    content: '';
-    position: absolute;
-    width: 0; height: 2px;
-    display: block;
-    margin-top: 5px;
-    right: 0;
-    background: rgba(0, 0, 0, .6);
-    transition: width .2s ease;
-    -webkit-transition: width .2s ease;
-}
+    &:after {
+        content: '';
+        position: absolute;
+        width: 0;
+        height: 2px;
+        display: block;
+        margin-top: -3px;
+        right: 0;
+        background: rgba(0, 0, 0, .6);
+        transition: width .2s ease;
+        -webkit-transition: width .2s ease;
+    }
 
-.link:hover:after{
-    width: 100%;
-    left: 0;
-    background: rgba(0, 0, 0, .6);
+    &:hover:after {
+        width: 100%;
+        left: 0;
+        background: rgba(0, 0, 0, .6);
+    }
 }
 
 .card {

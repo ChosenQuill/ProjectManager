@@ -33,7 +33,6 @@ function Manager() {
                         <Route render={() => <Redirect to='/home'/>}/>
                     </Switch>
                 </Content>
-
             </LevelCheck>
         </LevelManager>
     );
@@ -67,7 +66,7 @@ function ManagerSider(props) {
     const {loading, error, data} = useQuery(GET_PROJS);
     const {selected, setSelected} = props;
     return (
-        <Sider width={200} style={{background: '#'}}>
+        <Sider width={200} style={{background: '#', marginBottom: '-70px'}}>
             <Menu
                 mode="inline"
                 defaultSelectedKeys={['home']}
