@@ -1,12 +1,12 @@
 import React, {useState} from "react";
-import {withRouter, Route} from "react-router-dom";
+import {withRouter} from "react-router-dom";
 import queryString from "query-string";
 import PropTypes from 'prop-types';
 import ApolloClient, {gql, InMemoryCache} from "apollo-boost";
+import {persistCacheSync} from 'apollo-cache-persist-dev'
 import {useQuery} from '@apollo/react-hooks';
-import {Button, Card, Checkbox, Col, message, Row, Spin} from 'antd';
+import {Button, Card, Checkbox, Col, message, Row, Typography} from 'antd';
 import history from '../History';
-import {Typography} from 'antd';
 import Loading from "../Components/Loading";
 import {createButton, createSvgIcon, GithubLoginButton} from 'react-social-login-buttons'
 import discordIcon from '../assets/discord-logo.svg'
@@ -15,10 +15,16 @@ const {Text, Title} = Typography;
 
 export const SITE_LOC = process.env.REACT_APP_SITE_LOC;
 
+const cache = new InMemoryCache();
+
+persistCacheSync({
+    cache,
+    storage: window.localStorage,
+});
 
 export const GraphQLClient = new ApolloClient({
     uri: SITE_LOC + '/data/',
-    cache: new InMemoryCache(),
+    cache: cache,
     request: (operation) => {
         const token = localStorage.getItem('token');
         operation.setContext({
@@ -161,7 +167,6 @@ class Api {
     getToken() {
         return this.jwt;
     }
-
 }
 
 export const AuthApi = new Api();
@@ -178,6 +183,7 @@ const LevelQuery = gql`
         }
     }
 `;
+
 
 const RoleContext = React.createContext({status: 'ERROR', role: 'GUEST'});
 
