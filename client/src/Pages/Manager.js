@@ -1,17 +1,15 @@
 import React, {useEffect, useState} from "react";
 
-import {AuthLevel, LevelCheck, LevelManager} from "../Auth";
-import {Switch, Route, Redirect, useParams} from 'react-router-dom';
-import {Button, Card, Form, Input, List, message, PageHeader, Popconfirm, Typography, Menu, Layout, Icon} from "antd";
+import {AuthApi, AuthLevel, LevelCheck} from "../Auth";
+import {Redirect, Route, Switch, useParams} from 'react-router-dom';
+import {Button, Card, Icon, Input, Layout, List, Menu, message, PageHeader, Popconfirm, Typography} from "antd";
 import {gql} from 'apollo-boost';
 
 import history from '../History'
 import {useMutation, useQuery} from "@apollo/react-hooks";
 import Loading from "../Components/Loading";
-
 import './Manager.scss';
 import ReactMarkdown from "react-markdown";
-import slugify from "slugify";
 
 const {Title, Paragraph, Text} = Typography;
 const {SubMenu} = Menu;
@@ -20,21 +18,24 @@ const {Header, Content, Footer, Sider} = Layout;
 
 function Manager() {
     const [selectedKeys, setSelected] = useState(['home']);
+    useEffect(() => {
+        if (!AuthApi.getToken()) {
+            AuthApi.logout();
+        }
+    }, []);
 
     return (
-        <LevelManager>
-            <LevelCheck level={AuthLevel.USER} redirect={true}>
-                <ManagerSider selected={selectedKeys} setSelected={setSelected}/>
-                <Content>
-                    <Switch>
-                        <Route exact path='/home' render={(props) => <Home setSelected={setSelected} {...props}/>}/>
-                        <Route path='/project/:id' render={(props) => <Edit setSelected={setSelected} {...props} />}/>
-                        <Route path='/settings' render={(props) => <Settings setSelected={setSelected} {...props} />}/>
-                        <Route render={() => <Redirect to='/home'/>}/>
-                    </Switch>
-                </Content>
-            </LevelCheck>
-        </LevelManager>
+        <LevelCheck level={AuthLevel.USER} redirect={true}>
+            <ManagerSider selected={selectedKeys} setSelected={setSelected}/>
+            <Content>
+                <Switch>
+                    <Route exact path='/home' render={(props) => <Home setSelected={setSelected} {...props}/>}/>
+                    <Route path='/project/:id' render={(props) => <Edit setSelected={setSelected} {...props} />}/>
+                    <Route path='/settings' render={(props) => <Settings setSelected={setSelected} {...props} />}/>
+                    <Route render={() => <Redirect to='/home'/>}/>
+                </Switch>
+            </Content>
+        </LevelCheck>
     );
 }
 
@@ -65,6 +66,7 @@ const GET_PROJS = gql`
 function ManagerSider(props) {
     const {loading, error, data} = useQuery(GET_PROJS);
     const {selected, setSelected} = props;
+
     return (
         <Sider width={200} style={{background: '#', marginBottom: '-70px'}}>
             <Menu
@@ -138,7 +140,12 @@ function Projects() {
         }).then(value => {
             message.success('Project has been deleted!');
         }).catch(err => {
-            message.error(err.graphQLErrors[0].message);
+            console.log(err);
+            if (err.graphQLErrors) {
+                message.error(err.graphQLErrors[0].message);
+            } else {
+                message.error(err.message);
+            }
         });
     };
 
@@ -215,7 +222,7 @@ const DELETE_PROJ = gql`
 
 function Edit(props) {
     let {id} = useParams();
-    const {loading, error, data, refetch} = useQuery(GET_PROJ, {variables: {id}});
+    const {loading, err, data, refetch} = useQuery(GET_PROJ, {variables: {id}});
 
     const [changesMade, setChanges] = useState(false);
     const [project, setProject] = useState({});
@@ -272,9 +279,13 @@ function Edit(props) {
                 <Loading/>
             </Card>
         );
-    else if (error) {
-        message.error(error.graphQLErrors[0].message);
-        console.log(error);
+    else if (err) {
+        if (err.graphQLErrors) {
+            message.error(err.graphQLErrors[0].message);
+        } else {
+            message.error(err.message);
+        }
+        console.log(err);
         return <Redirect to='/home'/>;
     } else {
         if (Object.keys(project).length === 0) {
