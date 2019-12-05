@@ -76,7 +76,8 @@ const resolvers = {
     },
     User: {
         name: async (parent, args, context) => {
-            let result = await AccountManager.getProperties(context.id, ['avatar']);
+            let result = await AccountManager.getProperties(context.id, ['name']);
+            console.log(result);
             return result.name;
         },
         avatarUrl: async (parent, args, context) => {

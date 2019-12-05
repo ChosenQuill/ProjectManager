@@ -1,11 +1,14 @@
-import React, {useState} from "react";
+import React, {useEffect, useReducer, useState} from "react";
 import {withRouter} from "react-router-dom";
 import queryString from "query-string";
 import PropTypes from 'prop-types';
 import ApolloClient, {gql, InMemoryCache} from "apollo-boost";
-import {persistCacheSync} from 'apollo-cache-persist-dev'
-import {useQuery} from '@apollo/react-hooks';
+import {CachePersistor, persistCacheSync} from 'apollo-cache-persist-dev'
+import {useLazyQuery, useQuery} from '@apollo/react-hooks';
 import {Button, Card, Checkbox, Col, message, Row, Typography} from 'antd';
+import {isEmpty} from 'lodash';
+import { useLocalStorage } from '@rehooks/local-storage';
+
 import history from '../History';
 import Loading from "../Components/Loading";
 import {createButton, createSvgIcon, GithubLoginButton} from 'react-social-login-buttons'
@@ -17,9 +20,14 @@ export const SITE_LOC = process.env.REACT_APP_SITE_LOC;
 
 const cache = new InMemoryCache();
 
+const persistor = new CachePersistor({
+    cache,
+    storage: window.localStorage
+});
+
 persistCacheSync({
     cache,
-    storage: window.localStorage,
+    storage: window.localStorage
 });
 
 export const GraphQLClient = new ApolloClient({
@@ -27,6 +35,9 @@ export const GraphQLClient = new ApolloClient({
     cache: cache,
     request: (operation) => {
         const token = localStorage.getItem('token');
+        if(!token) {
+            throw Error('Not Logged In (Please Report)');
+        }
         operation.setContext({
             headers: {
                 authorization: token ? token : ''
@@ -46,7 +57,7 @@ export const DiscordLoginButton = createButton(
 
 class Api {
     public baseUrl = SITE_LOC;
-    private jwt: String = localStorage.getItem('token');
+    private jwt: string = localStorage.getItem('token');
     public loginLoc: string;
 
     constructor() {
@@ -147,7 +158,10 @@ class Api {
 
     logout() {
         this.clearToken(true);
-        GraphQLClient.resetStore().then(() => history.push('/login'));
+        history.push('/login');
+        GraphQLClient.resetStore();
+        persistor.purge();
+        message.success("Logged Out");
         console.log("Logging Out");
     }
 
@@ -155,7 +169,6 @@ class Api {
         if (store)
             localStorage.setItem('token', token);
         this.jwt = token;
-
     }
 
     clearToken(store) {
@@ -184,66 +197,80 @@ const LevelQuery = gql`
     }
 `;
 
-
-const RoleContext = React.createContext({status: 'ERROR', role: 'GUEST'});
-
-export const GetRole = RoleContext.Consumer;
-
-export function LevelManager(props) {
-    const {loading, error, data} = useQuery(LevelQuery);
-    const [errorDisplayed, setErrorDisplayed] = useState(false);
-    let value = {status: 'LOADING', role: ''};
-    if (!loading) {
-        if (error)
-            value.status = 'ERROR';
-        else {
-            value.status = 'SUCCESS';
-            value.role = data.me.role;
-        }
-    }
-
-    if (error && !errorDisplayed) {
-        console.log("DataConnection Error: " + error);
-        console.log(JSON.stringify(error));
-        if (error.message == "Network error: Failed to fetch")
-            message.error("There was an issue connecting you to our servers.", 10);
-        else
-            message.error("There was an error authenticating you.", 10);
-        setErrorDisplayed(true);
-    } else if (errorDisplayed && !error) {
-        setErrorDisplayed(false);
-    }
-
-    return (<RoleContext.Provider value={value}>
-        {props.children}
-    </RoleContext.Provider>);
+interface IRole {
+    status: 'LOADING' | 'SUCCESS' | 'ERROR',
+    role: 'NONE' | 'GUEST' | 'USER',
 }
+
+export const useRole = () : IRole => {
+    const [fetch, {loading, error, data}] = useLazyQuery(LevelQuery);
+    const [useQuery, setQuery] = useState(false);
+    const [role, setRole] = useState<IRole>({
+        status: 'LOADING',
+        role: 'NONE'
+    });
+    // const [token] = useLocalStorage('token');
+    const token = localStorage.getItem("token");
+    useEffect(()=>{
+        console.log(token);
+        if(isEmpty(token)){
+            setRole({
+                status: "SUCCESS",
+                role: "GUEST"
+            });
+            setQuery(false);
+        } else {
+            fetch();
+            setQuery(true);
+            console.log('fetching')
+        }
+    },[token]);
+
+    useEffect(()=>{
+        console.log(data);
+        if(useQuery) {
+            if (error)
+                setRole({
+                    status: 'ERROR',
+                    role: 'GUEST',
+                });
+            else if(data.me) {
+                setRole({
+                    status: 'SUCCESS',
+                    role: data.me.role
+                });
+            } else {
+                console.log('Error Getting Role');
+            }
+        }
+    },[data,error]);
+
+    return role;
+};
+
 
 export function LevelCheck(props) {
-    return <GetRole children={({role, status}) => {
-        if (status === 'LOADING') {
-            return (
-                <Loading/>
-            );
-        }
-        if (role === props.level)
-            return props.children;
-        else if (props.redirect)
-            AuthApi.login();
-        else if (props.NoPermission)
-            return (<props.NoPermission/>);
-        else return (
-                <Row>
-                    <Col style={{textAlign: 'center'}}>
-                        <Title level={2}>You do not have permission to view this.</Title>
-                        <Button type='primary' size='large' onClick={() => AuthApi.login()}>Login</Button>
-                    </Col>
-                </Row>
-            );
-    }}/>;
+    const role = useRole();
+    if (role.status === 'LOADING') {
+        return (
+            <Loading/>
+        );
+    }
+    if (role.role === props.level)
+        return props.children;
+    else if (props.redirect)
+        AuthApi.login();
+    else if (props.NoPermission)
+        return (<props.NoPermission/>);
+    else return (
+            <Row>
+                <Col style={{textAlign: 'center'}}>
+                    <Title level={2}>You do not have permission to view this.</Title>
+                    <Button type='primary' size='large' onClick={() => AuthApi.login()}>Login</Button>
+                </Col>
+            </Row>
+        );
 }
-
-LevelCheck.context = RoleContext;
 
 LevelCheck.propTypes = {
     level: PropTypes.oneOf(Object.values(AuthLevel)).isRequired,
