@@ -8,7 +8,7 @@ import {Card, Layout, Typography} from "antd";
 import {Redirect, Route, Switch, withRouter} from "react-router-dom";
 import {ApolloProvider} from '@apollo/react-hooks';
 
-import {AuthApi, GraphQLClient} from './Auth';
+import {AuthApi, GraphQLClient, RoleManager} from './Auth';
 import Manager from './Pages/Manager';
 import Intro from "./Pages/Intro";
 import Profile from "./Components/Profile";
@@ -24,30 +24,32 @@ class App extends React.Component {
     render() {
         return (
             <ApolloProvider client={GraphQLClient}>
-                <Header className='header'>
-                    <a className='logo' href='https://www.suredroid.com'>
-                        <img src={logo} style={{height: '65%'}}/>
-                        <span className='logoText link'>
+                <RoleManager>
+                    <Header className='header'>
+                        <a className='logo' href='https://www.suredroid.com'>
+                            <img src={logo} style={{height: '65%'}}/>
+                            <span className='logoText link'>
                                 SUREDROID
                             </span>
-                    </a>
-                    <Profile/>
-                </Header>
-                <Layout>
-                    <Switch>
-                        <Route path='/' exact component={Intro}/>
-                        <Route path={['/home', '/settings', '/project', '/billing']} component={Manager}/>
-                        <Route path={['/login', '/signup']} component={AuthApi.LoginComponent}/>
-                        {/*---- ToDo (Billing, Pricing) ----*/}
-                        <Route path='/pricing'/>
+                        </a>
+                        <Profile/>
+                    </Header>
+                    <Layout>
+                        <Switch>
+                            <Route path='/' exact component={Intro}/>
+                            <Route path={['/home', '/settings', '/project', '/billing']} component={Manager}/>
+                            <Route path={['/login', '/signup']} component={AuthApi.LoginComponent}/>
+                            {/*---- ToDo (Billing, Pricing) ----*/}
+                            <Route path='/pricing'/>
 
-                        <Route path='/tos' component={Tos}/>
-                        <Route path='/terms' render={() => <Redirect to='/tos'/>}/>
+                            <Route path='/tos' component={Tos}/>
+                            <Route path='/terms' render={() => <Redirect to='/tos'/>}/>
 
-                        <Route render={() => <Redirect to='/'/>}/>
-                    </Switch>
-                </Layout>
-                <Footer style={{textAlign: 'center'}}>Copyright © SureDroid</Footer>
+                            <Route render={() => <Redirect to='/'/>}/>
+                        </Switch>
+                    </Layout>
+                    <Footer style={{textAlign: 'center'}}>Copyright © SureDroid</Footer>
+                </RoleManager>
             </ApolloProvider>
         );
     }
