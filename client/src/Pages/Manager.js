@@ -46,7 +46,13 @@ function Settings(props) {
     return (
         <Card className='card'>
             <PageHeader onBack={() => history.push('/home')} title="Settings" subTitle="Change your info">
-                Some settings here..
+                <Paragraph>
+                    <Text>
+                        Name:
+                    </Text>
+                    <Input maxLength={4}/>
+                </Paragraph>
+                <Button type='danger'>Delete Your Account</Button>
             </PageHeader>
         </Card>
     )

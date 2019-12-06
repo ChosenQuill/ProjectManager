@@ -122,7 +122,7 @@ class Api {
 
         return (
             <Card className='card'>
-                <div style={{margin: "0 auto", width: '400px'}}>
+                <div style={{margin: "0 auto", width: '400px', maxWidth:'100%'}}>
                     <Title style={{textAlign: 'center'}}>
                         {
                             signUp ? "Sign Up" : "Log In"
