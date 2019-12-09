@@ -48,7 +48,7 @@ class App extends React.Component {
                             <Route render={() => <Redirect to='/'/>}/>
                         </Switch>
                     </Layout>
-                    <Footer style={{textAlign: 'center'}}>Copyright © SureDroid</Footer>
+                    <Footer style={{textAlign: 'center', bottom: 0}}>Copyright © SureDroid</Footer>
                 </RoleManager>
             </ApolloProvider>
         );
@@ -81,7 +81,7 @@ function Tos(props) {
                 or is using the Website or Service; that accesses or uses any part of the Account; or that directs the
                 use of the Account in the performance of its functions. A User must be at least 13 years of age.
 
-                An "Account" represents your legal relationship with GitHub. A “User Account” represents an individual
+                An "Account" represents your legal relationship with SureDroid. A “User Account” represents an individual
                 User’s authorization to log in to and use the Service and serves as a User’s identity on SureDroid
                 Project Manager. “Organizations” are shared workspaces that may be associated with a single entity or
                 with one or more Users where multiple Users can collaborate across many projects at once. A User Account
