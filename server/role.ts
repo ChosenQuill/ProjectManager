@@ -1,4 +1,5 @@
 import {ObjectId} from "mongodb";
+import {flatMap} from 'lodash';
 
 const Permission = {
     //Projects
@@ -13,18 +14,28 @@ const Permission = {
 
 class Role {
     public static GUEST: Role = new Role('GUEST', [Permission.VIEW_PUBLIC_PROJECTS]);
-    public static USER: Role = new Role('USER', [Permission.CREATE_PROJECT, Permission.DELETE_PROJECT, Permission.UPDATE_PROJECT, Permission.VIEW_ALL_PROJECTS, Permission.VIEW_PUBLIC_PROJECTS, Permission.ACCESS_PROFILE]);
+    public static USER: Role = new Role('USER', [Permission.CREATE_PROJECT, Permission.DELETE_PROJECT,
+        Permission.UPDATE_PROJECT, Permission.VIEW_ALL_PROJECTS, Permission.ACCESS_PROFILE], [Role.GUEST]);
 
     public readonly name: string;
-    private permissions: string[];
+    private readonly rolePermissions: string[];
+    private readonly permissions: string[];
+    private readonly inherit: Role[];
 
-    private constructor(name: string, permissions: string[]) {
+    private constructor(name: string, rolePermissions: string[], inherit: Role[] = []) {
         this.name = name;
-        this.permissions = permissions;
+        this.inherit = inherit;
+        this.rolePermissions = rolePermissions;
+        this.permissions = this.getAllPermissions();
+        console.log(this.permissions);
     }
 
     public has(permission: string) {
         return this.permissions.includes(permission);
+    }
+
+    private getAllPermissions(){
+        return this.rolePermissions.concat(flatMap(this.inherit, (role=>role.getAllPermissions())));
     }
 
     equals(otherRole: Role) {

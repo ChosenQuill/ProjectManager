@@ -186,47 +186,53 @@ class Api {
     getToken() {
         return this.jwt;
     }
-
-
 }
 
 export const AuthApi = new Api();
 
 export const AuthLevel = {
+    ADMIN: 'ADMIN',
     USER: 'USER',
-    GUEST: 'GUEST'
+    GUEST: 'GUEST',
 };
 
 const LevelQuery = gql`
     query getRole {
         me {
-            role
+            role {
+                name,
+                permissions
+            }
         }
     }
 `;
 
 interface IRole {
     status: 'LOADING' | 'SUCCESS' | 'ERROR',
-    role: 'NONE' | 'GUEST' | 'USER',
+    name: 'NONE' | 'GUEST' | 'USER' | 'ADMIN',
+    permissions: string[]
 }
 
 const RoleContext = React.createContext<IRole>({
-    role: 'NONE',
-    status: 'LOADING'
+    name: 'NONE',
+    status: 'LOADING',
+    permissions: []
 });
 
 export const RoleManager = ({children}) => {
     const [fetch, {error, data, called}] = useLazyQuery(LevelQuery);
     const [role, setRole] = useState<IRole>({
         status: 'LOADING',
-        role: 'NONE'
+        name: 'NONE',
+        permissions: []
     });
     useEffect(()=>{
         // console.log('token',token,localStorage.getItem('token'));
         if(isEmpty(localStorage.getItem('token'))){
             setRole({
                 status: "SUCCESS",
-                role: "GUEST"
+                name: "GUEST",
+                permissions: []
             });
         } else {
             fetch();
@@ -240,12 +246,14 @@ export const RoleManager = ({children}) => {
             if (error)
                 setRole({
                     status: 'ERROR',
-                    role: 'GUEST',
+                    name: 'GUEST',
+                    permissions: []
                 });
-            else if(has(data,'me.role')) {
+            else if(has(data,'me.role.name') && has(data,'me.role.permissions')) {
                 setRole({
                     status: 'SUCCESS',
-                    role: data.me.role
+                    name: data.me.role.name,
+                    permissions: data.me.role.permissions
                 });
             } else {
                 console.log('Error Getting Role');
@@ -274,7 +282,7 @@ export function LevelCheck(props) {
             <Loading/>
         );
     }
-    if (role.role === props.level)
+    if (role.name === props.level)
         return props.children;
     else if (props.redirect)
         AuthApi.login();

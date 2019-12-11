@@ -5,7 +5,7 @@ const slugify = require('slugify');
 const dbm = require('../database');
 const shortid = require('shortid');
 
-let accounts: Collection, users: Collection;
+let accounts: Collection, users: Collection, whitelist: Collection;
 
 dbm.onceConnected((db) => {
     accounts = db.collection('accounts');
@@ -15,6 +15,8 @@ dbm.onceConnected((db) => {
     users.createIndex({
         "connections": 1
     });
+
+    whitelist = db.collection('whitelist')
 });
 
 /// Account Management
@@ -46,6 +48,10 @@ class AccountManager {
                 id
             }
         }, {limit: 1}) == 1;
+    }
+
+    public async onWhitelist(id: string) {
+
     }
 
     async get(service: string, id: string) {
