@@ -91,6 +91,7 @@ export class AuthService<ClientIdName extends string = 'client_id'> {
                         res.status(200).redirect(SITE_LOC + '/signup?error=1');
                         return;
                     }
+
                     let jwt = token.encrypt({id: account});
                     res.status(200).redirect(SITE_LOC + '/login?token=' + jwt);
                 } catch (e) {

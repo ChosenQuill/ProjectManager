@@ -35,8 +35,8 @@ function Profile() {
     const [query, {loading, error, data, called}] = useLazyQuery(GET_PROFILE);
 
     useEffect(()=>{
-        console.log('ProfileRole', role.role);
-        if(role.status === 'SUCCESS' && role.role === 'USER') {
+        console.log('ProfileRole', role.name);
+        if(role.status === 'SUCCESS' && role.name === 'USER') {
             query();
         }
     },[role]);
@@ -46,7 +46,7 @@ function Profile() {
     },[data,error]);
 
     console.log('Called',called,'Role',role);
-    if(called && !loading && role.role === 'USER') {
+    if(called && !loading && role.name === 'USER') {
         if(error){
             message.error(error.message);
         }

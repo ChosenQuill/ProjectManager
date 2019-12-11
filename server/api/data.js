@@ -16,9 +16,9 @@ const typeDefs = gql`
         role: Role!
     }
 
-    enum Role {
-        USER,
-        GUEST
+    type Role {
+        name: String!
+        permissions: [String]!
     }
 
     input ProjectInput {
@@ -85,7 +85,7 @@ const resolvers = {
             return result.avatar;
         },
         role: (parent, args, context) => {
-            return context.role.name;
+            return context.role;
         },
         id: (parent, args, context) => {
             return context.id.toHexString();
