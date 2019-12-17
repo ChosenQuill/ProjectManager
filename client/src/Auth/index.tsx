@@ -274,9 +274,7 @@ export const useRole = () : IRole => {
 
 
 export function LevelCheck(props) {
-    console.log('get UseRole');
     const role = useRole();
-    console.log('return useRole');
     if (role.status === 'LOADING') {
         return (
             <Loading/>
@@ -304,4 +302,20 @@ LevelCheck.propTypes = {
     NoPermission: PropTypes.element,
     redirect: PropTypes.bool,
 };
+
+export function PermissionCheck({permission, children, NoPermission, showDenied, showLoading, redirect}) {
+    if(NoPermission){
+        showDenied = true;
+    }
+}
+
+PermissionCheck.protoTypes = {
+    permission: PropTypes.string.isRequired,
+    children: PropTypes.any.isRequired,
+    NoPermission: PropTypes.element,
+    showDenied: PropTypes.bool, // Default false
+    showLoading: PropTypes.bool, // Default false
+    redirect: PropTypes.bool,
+};
+
 

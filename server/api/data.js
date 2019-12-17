@@ -18,6 +18,7 @@ const typeDefs = gql`
 
     type Role {
         name: String!
+        allNames: [String]!
         permissions: [String]!
     }
 
