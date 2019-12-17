@@ -21,13 +21,14 @@ class Role {
     private readonly rolePermissions: string[];
     private readonly permissions: string[];
     private readonly inherit: Role[];
+    public readonly allNames: string[];
 
     private constructor(name: string, rolePermissions: string[], inherit: Role[] = []) {
         this.name = name;
         this.inherit = inherit;
         this.rolePermissions = rolePermissions;
         this.permissions = this.getAllPermissions();
-        console.log(this.permissions);
+        this.allNames = this.getAllNames();
     }
 
     public has(permission: string) {
@@ -36,6 +37,10 @@ class Role {
 
     private getAllPermissions(){
         return this.rolePermissions.concat(flatMap(this.inherit, (role=>role.getAllPermissions())));
+    }
+
+    private getAllNames(){
+        return [name].concat(flatMap(this.inherit, (role=>role.getAllNames())));
     }
 
     equals(otherRole: Role) {
