@@ -1,6 +1,6 @@
 import React, {useEffect, useState} from "react";
 
-import {AuthApi, AuthLevel, LevelCheck} from "../Auth";
+import {AuthApi, AuthLevel, LevelCheck, PermissionCheck, RoleCheck} from "../Auth";
 import {Redirect, Route, Switch, useParams} from 'react-router-dom';
 import {Button, Card, Icon, Input, Layout, List, Menu, message, PageHeader, Popconfirm, Typography} from "antd";
 import {gql} from 'apollo-boost';
@@ -25,17 +25,17 @@ function Manager() {
     }, []);
 
     return (
-        <LevelCheck level={AuthLevel.USER} redirect={true}>
+        <RoleCheck name='USER'>
             <ManagerSider selected={selectedKeys} setSelected={setSelected}/>
             <Content>
                 <Switch>
-                    <Route exact path='/home' render={(props) => <Home setSelected={setSelected} {...props}/>}/>
+                    <Route exact path='/home' render={(props) =><Home setSelected={setSelected} {...props}/>}/>
                     <Route path='/project/:id' render={(props) => <Edit setSelected={setSelected} {...props} />}/>
                     <Route path='/settings' render={(props) => <Settings setSelected={setSelected} {...props} />}/>
                     <Route render={() => <Redirect to='/home'/>}/>
                 </Switch>
             </Content>
-        </LevelCheck>
+        </RoleCheck>
     );
 }
 

@@ -5,7 +5,7 @@ const slugify = require('slugify');
 const dbm = require('../database');
 const shortid = require('shortid');
 
-let accounts: Collection, users: Collection, whitelist: Collection;
+let accounts: Collection, users: Collection, settings: Collection;
 
 dbm.onceConnected((db) => {
     accounts = db.collection('accounts');
@@ -16,8 +16,60 @@ dbm.onceConnected((db) => {
         "connections": 1
     });
 
-    whitelist = db.collection('whitelist')
+    settings = db.collection('settings');
+    settings.createIndex({
+        "name": 1
+    })
 });
+
+class SettingsManager {
+    whitelist = new WhitelistManager();
+
+}
+
+class WhitelistManager {
+    constructor() {
+        dbm.onceConnected(()=>this.init());
+    }
+
+    private async init(){
+        if (await settings.countDocuments({name: 'whitelist'},{limit: 1}) != 1)
+            settings.insertOne({
+                name: 'whitelist',
+                status: false,
+                list: []
+            });
+    }
+
+    async has(id: string) : Promise<boolean> {
+        return false; // TODO
+    }
+
+    async set(status: boolean){
+        const results = await settings.updateOne({name: 'whitelist'},{$set: {status: status}});
+        return results.matchedCount == 1;
+    }
+
+    async status(): Promise<boolean> {
+        const whitelist = await settings.findOne({name:'whitelist'});
+        return whitelist.status;
+    }
+
+    async add(name: string, id: string){
+        const results = await settings.updateOne({name: 'whitelist'},{$push: {list: {name, id}}});
+        return results.modifiedCount == 1;
+    }
+
+    async remove(id: string){
+        const results = await settings.updateOne({name: 'whitelist'},{$pull: {list: {id}}});
+        return results.modifiedCount == 1;
+    }
+
+    async getList(){
+        const whitelist = await settings.findOne({name:'whitelist'});
+        return whitelist.list;
+    }
+}
 
 /// Account Management
 class AccountManager {
@@ -31,6 +83,7 @@ class AccountManager {
             return await this.get(service.name, userInfo.id);
         let accountResult = await accounts.insertOne({
             projects: [],
+            role: 'USER',
             ...accountInfo
         });
 
@@ -48,10 +101,6 @@ class AccountManager {
                 id
             }
         }, {limit: 1}) == 1;
-    }
-
-    public async onWhitelist(id: string) {
-
     }
 
     async get(service: string, id: string) {
@@ -82,6 +131,11 @@ class AccountManager {
                 ...values
             }
         })
+    }
+
+    async getRole(accountID: ObjectID) : Promise<string> {
+        const results = await accounts.findOne({_id: accountID}, {projection: {role: 1}});
+        return results.role;
     }
 
 }
@@ -235,4 +289,5 @@ module.exports = {
     ProjectData,
     ProjectManager: new ProjectManager(),
     AccountManager: new AccountManager(),
+    SettingsManager: new SettingsManager(),
 };
