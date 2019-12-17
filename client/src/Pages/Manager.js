@@ -59,6 +59,8 @@ function Settings(props) {
 
 }
 
+// TODO Add whitelist settings page
+
 const GET_PROJS = gql`
     query getProjs {
         projects {
