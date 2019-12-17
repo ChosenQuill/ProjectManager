@@ -3,11 +3,18 @@ const dbm = require('../database');
 const {ApolloServer, gql, AuthenticationError} = require('apollo-server-express');
 const {buildSchema} = require('graphql');
 const token = require('./token');
-const {ProjectManager, AccountManager} = require('../data-manager');
+const {ProjectManager, AccountManager, SettingsManager} = require('../data-manager');
 const ObjectId = require('mongodb').ObjectId;
 const {Role, Permission} = require('../role');
 
 const typeDefs = gql`
+
+    # Queries
+    type Query {
+        me: User!
+        projects: [ProjectData!]!
+        project(projectID: String!) : ProjectData
+    }
 
     type User {
         name: String
@@ -22,17 +29,17 @@ const typeDefs = gql`
         permissions: [String]!
     }
 
-    input ProjectInput {
-        name: String
-        description: String
-        visible: Boolean
-    }
-
     type ProjectData {
         id: String!
         name: String!
         description: String
         visible: Boolean!
+    }
+
+    # Mutations
+    type Mutation {
+        Project(projectID: String) : ProjectOps!
+        Server : ServerOps!
     }
 
     type ProjectOps {
@@ -41,18 +48,26 @@ const typeDefs = gql`
         remove : Boolean!
     }
 
-    # The "Query" type is special: it lists all of the available queries that
-    # clients can execute, along with the return type for each. In this
-    # case, the "books" query returns an array of zero or more Books (defined above).
-    type Query {
-        me: User!
-        projects: [ProjectData!]!
-        project(projectID: String!) : ProjectData
+    input ProjectInput {
+        name: String
+        description: String
+        visible: Boolean
     }
 
+    type ServerOps {
+        Whitelist: WhitelistOps!
+    }
 
-    type Mutation {
-        Project(projectID: String) : ProjectOps
+    type WhitelistOps {
+        set(status: Boolean!) : Boolean!
+        add(name: String!, userID: String!) : Boolean!
+        remove(userID: String!) : Boolean!
+        list : [WhitelistEntry!]!
+    }
+    
+    type WhitelistEntry {
+        name: String!
+        id: String!
     }
 `;
 
@@ -60,7 +75,7 @@ const resolvers = {
     Mutation: {
         Project: (parent, args, context) => {
             return ({hasProjectID: (args.projectID), ...args});
-        }
+        },
     },
     Query: {
         me: (parent, args, context) => {
@@ -112,6 +127,16 @@ const resolvers = {
                 throw new Error('Invalid Request');
             return ProjectManager.update(context.id, parent.projectID, {...args.data});
         }
+    },
+    WhitelistOps: (parent, args, context) => {
+        if(!context.role.has(Permission.MODIFY_WHITELIST))
+            throw new AuthenticationError('You cannot perform this action.');
+        return {
+            set: (parent, args) => SettingsManager.whitelist.set(args.status),
+            add: (parent, args) => SettingsManager.whitelist.add(args.name,args.userID),
+            remove: (parent, args) => SettingsManager.whitelist.remove(args.userID),
+            list: () => SettingsManager.whitelist.getList()
+        };
     }
 };
 
@@ -137,10 +162,15 @@ const server = new ApolloServer({
 
         // Valid OID Check
         let oid = new ObjectId(id);
-        if (oid.toHexString() !== id || !await AccountManager.has(oid)) {
+        if (oid.toHexString() !== id) {
             throw new AuthenticationError('Invalid ID');
         }
-        return new User(oid, authenticated ? Role.USER : Role.GUEST);
+        let role = await AccountManager.getRole(oid);
+        if(!role){
+            throw new AuthenticationError('Invalid ID');
+        }
+
+        return new User(oid, authenticated ? Role[role] : Role.GUEST);
     }
 });
 

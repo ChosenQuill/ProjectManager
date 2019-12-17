@@ -27,7 +27,7 @@ class App extends React.Component {
                 <RoleManager>
                     <Header className='header'>
                         <a className='logo' href='https://www.suredroid.com'>
-                            <img src={logo} style={{height: '65%'}} className='elem'/>
+                            <img src={logo} style={{height: '65%'}} className='elem' alt='logo'/>
                             <span className='logoText link elem'>
                                 SUREDROID
                             </span>

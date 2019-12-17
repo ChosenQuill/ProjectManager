@@ -36,7 +36,7 @@ function Profile() {
 
     useEffect(()=>{
         console.log('ProfileRole', role.name);
-        if(role.status === 'SUCCESS' && role.name === 'USER') {
+        if(role.status === 'SUCCESS' && role.allNames.includes('USER')) {
             query();
         }
     },[role]);
@@ -46,7 +46,7 @@ function Profile() {
     },[data,error]);
 
     console.log('Called',called,'Role',role);
-    if(called && !loading && role.name === 'USER') {
+    if(called && !loading && role.allNames.includes('USER')) {
         if(error){
             message.error(error.message);
         }

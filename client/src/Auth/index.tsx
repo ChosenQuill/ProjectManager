@@ -34,8 +34,8 @@ export const GraphQLClient = new ApolloClient({
     cache: cache,
     request: (operation) => {
         const token = localStorage.getItem('token');
-        if(!token) {
-            console.log('Error at',operation.operationName);
+        if (!token) {
+            console.log('Error at', operation.operationName);
             throw Error('Not Logged In (Please Report)');
         }
         operation.setContext({
@@ -122,7 +122,7 @@ class Api {
 
         return (
             <Card className='card'>
-                <div style={{margin: "0 auto", width: '400px', maxWidth:'100%'}}>
+                <div style={{margin: "0 auto", width: '400px', maxWidth: '100%'}}>
                     <Title style={{textAlign: 'center'}}>
                         {
                             signUp ? "Sign Up" : "Log In"
@@ -139,8 +139,8 @@ class Api {
                         </Checkbox>
 
                     }
-                    <Card style={{margin: '4px', marginTop:'8px'}}>
-                        {signUp ? 'Already have an account? ': 'New here? '}
+                    <Card style={{margin: '4px', marginTop: '8px'}}>
+                        {signUp ? 'Already have an account? ' : 'New here? '}
                         <Link to={signUp ? '/login' : '/signup'}>{signUp ? 'Login' : 'Signup'}</Link>
                     </Card>
 
@@ -201,7 +201,8 @@ const LevelQuery = gql`
         me {
             role {
                 name,
-                permissions
+                permissions,
+                allNames
             }
         }
     }
@@ -210,13 +211,15 @@ const LevelQuery = gql`
 interface IRole {
     status: 'LOADING' | 'SUCCESS' | 'ERROR',
     name: 'NONE' | 'GUEST' | 'USER' | 'ADMIN',
-    permissions: string[]
+    permissions: string[],
+    allNames: string[]
 }
 
 const RoleContext = React.createContext<IRole>({
     name: 'NONE',
     status: 'LOADING',
-    permissions: []
+    permissions: [],
+    allNames: [],
 });
 
 export const RoleManager = ({children}) => {
@@ -224,42 +227,46 @@ export const RoleManager = ({children}) => {
     const [role, setRole] = useState<IRole>({
         status: 'LOADING',
         name: 'NONE',
-        permissions: []
+        permissions: [],
+        allNames: [],
     });
-    useEffect(()=>{
+    useEffect(() => {
         // console.log('token',token,localStorage.getItem('token'));
-        if(isEmpty(localStorage.getItem('token'))){
+        if (isEmpty(localStorage.getItem('token'))) {
             setRole({
                 status: "SUCCESS",
                 name: "GUEST",
-                permissions: []
+                permissions: [],
+                allNames: ['GUEST'],
             });
         } else {
             fetch();
             console.log('fetching request sent')
         }
-    },[localStorage.getItem('token')]);
+    }, [localStorage.getItem('token')]);
 
-    useEffect(()=>{
-        console.log('fetching new role data',data,error,called,has(data,'me.role'));
-        if(called) {
+    useEffect(() => {
+        console.log('fetching new role data', data, error, called, has(data, 'me.role'));
+        if (called) {
             if (error)
                 setRole({
                     status: 'ERROR',
                     name: 'GUEST',
-                    permissions: []
+                    permissions: [],
+                    allNames: ['GUEST'],
                 });
-            else if(has(data,'me.role.name') && has(data,'me.role.permissions')) {
+            else if (has(data, 'me.role.name') && has(data, 'me.role.permissions') && has(data, 'me.role.allNames')) {
                 setRole({
                     status: 'SUCCESS',
                     name: data.me.role.name,
-                    permissions: data.me.role.permissions
+                    permissions: data.me.role.permissions,
+                    allNames: data.me.role.allNames
                 });
             } else {
                 console.log('Error Getting Role');
             }
         }
-    },[data,error]);
+    }, [data, error]);
 
     return (
         <RoleContext.Provider value={role}>
@@ -268,44 +275,38 @@ export const RoleManager = ({children}) => {
     );
 };
 
-export const useRole = () : IRole => {
+export const useRole = (): IRole => {
     return useContext(RoleContext);
 };
 
+const NoPermissionBlock = (
+    <Row>
+        <Col style={{textAlign: 'center'}}>
+            <Title level={2}>You do not have permission to view this.</Title>
+            <Button type='primary' size='large' onClick={() => AuthApi.login()}>Login</Button>
+        </Col>
+    </Row>
+);
 
-export function LevelCheck(props) {
-    const role = useRole();
-    if (role.status === 'LOADING') {
-        return (
-            <Loading/>
-        );
-    }
-    if (role.name === props.level)
-        return props.children;
-    else if (props.redirect)
-        AuthApi.login();
-    else if (props.NoPermission)
-        return (<props.NoPermission/>);
-    return (
-            <Row>
-                <Col style={{textAlign: 'center'}}>
-                    <Title level={2}>You do not have permission to view this.</Title>
-                    <Button type='primary' size='large' onClick={() => AuthApi.login()}>Login</Button>
-                </Col>
-            </Row>
-        );
-}
-
-LevelCheck.propTypes = {
-    level: PropTypes.oneOf(Object.values(AuthLevel)).isRequired,
-    children: PropTypes.any.isRequired,
-    NoPermission: PropTypes.element,
-    redirect: PropTypes.bool,
-};
-
-export function PermissionCheck({permission, children, NoPermission, showDenied, showLoading, redirect}) {
-    if(NoPermission){
-        showDenied = true;
+export function PermissionCheck({permission, children, NoPermission = NoPermissionBlock, showDenied = false, showLoading = false, redirect = true}) {
+    const userRole = useRole();
+    switch (userRole.status) {
+        case "LOADING":
+            if (showLoading)
+                return (
+                    <Loading/>
+                );
+            else return null;
+        case "SUCCESS":
+            if(userRole.permissions.includes(permission))
+                return children;
+            if(redirect)
+                AuthApi.login();
+        case "ERROR":
+            if(showDenied)
+                return NoPermission;
+            else
+                return null;
     }
 }
 
@@ -313,9 +314,38 @@ PermissionCheck.protoTypes = {
     permission: PropTypes.string.isRequired,
     children: PropTypes.any.isRequired,
     NoPermission: PropTypes.element,
-    showDenied: PropTypes.bool, // Default false
-    showLoading: PropTypes.bool, // Default false
+    showDenied: PropTypes.bool,
+    showLoading: PropTypes.bool,
     redirect: PropTypes.bool,
 };
 
+export function RoleCheck({name, children, NoPermission = NoPermissionBlock, showDenied = false, showLoading = false, redirect = false}) {
+    const userRole = useRole();
+    switch (userRole.status) {
+        case "LOADING":
+            if (showLoading)
+                return (
+                    <Loading/>
+                );
+            else return null;
+        case "SUCCESS":
+            if(userRole.allNames.includes(name))
+                return children;
+            if(redirect)
+                AuthApi.login();
+        case "ERROR":
+            if(showDenied)
+                return NoPermission;
+            else
+                return null;
+    }
+}
 
+RoleCheck.protoTypes = {
+    name: PropTypes.string.isRequired,
+    children: PropTypes.any.isRequired,
+    NoPermission: PropTypes.element,
+    showDenied: PropTypes.bool,
+    showLoading: PropTypes.bool,
+    redirect: PropTypes.bool,
+};

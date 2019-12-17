@@ -8,7 +8,7 @@ const token = require('./token');
 const cookieParser = require('cookie-parser');
 const fs = require('fs');
 const oauth = require('simple-oauth2');
-const {AccountManager} = require('../data-manager');
+const {AccountManager, SettingsManager} = require('../data-manager');
 
 const authTokens = JSON.parse(fs.readFileSync('./oauth.json').toString());
 export const router = express.Router();
@@ -82,7 +82,9 @@ export class AuthService<ClientIdName extends string = 'client_id'> {
 
                     let account;
                     if (req.cookies.signUp) {
-                        account = await AccountManager.create(this, identity);
+                        // TODO Change from await to polling for faster account creation.
+                        if(!await SettingsManager.whitelist.status() || await SettingsManager.whitelist.has(identity.id))
+                            account = await AccountManager.create(this, identity);
                     } else {
                         account = await AccountManager.get(this.name, identity.id);
                     }
