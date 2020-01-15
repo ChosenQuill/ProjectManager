@@ -146,9 +146,10 @@ class AccountManager {
 
     async deleteAccount(accountID: ObjectID, confirm: Boolean) : Promise<Boolean> {
         if(confirm){
-            // users.findOneAndDelete({accountID: accountID});
-            // accounts.findOneAndDelete({_id: accountID});
-            return true;
+            let res1 = await users.findOneAndDelete({accountID: accountID});
+            let res2 = await accounts.findOneAndDelete({_id: accountID});
+            console.log(res1,res2);
+            return (res1.ok && res1.value != null && res2.value != null);
         }
         return false;
     }

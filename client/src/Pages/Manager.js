@@ -67,7 +67,13 @@ function Settings(props) {
     const [showDM, setDM] = useState(false); //Delete Modal
     const [deleteAcc] = useMutation(DELETE_ACC, {
         onCompleted: res=> {
-            console.log(res);
+            if(res.User.delete){
+                AuthApi.logout(false);
+                message.success('Your account has deleted.')
+            }
+            else {
+                message.error('There was an error deleting your account, please contact support.')
+            }
 
         }
     });

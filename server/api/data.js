@@ -38,7 +38,7 @@ const typeDefs = gql`
     # Mutations
     type Mutation {
         Project(projectID: String) : ProjectOps!
-        User: UserOps!
+        User : UserOps!
         Server : ServerOps!
     }
 
@@ -64,23 +64,18 @@ const typeDefs = gql`
         remove(userID: String!) : Boolean!
         list : [WhitelistEntry!]!
     }
-    
+
     type WhitelistEntry {
         name: String!
         id: String!
     }
-    
+
     type UserOps {
         delete(confirm: Boolean!) : Boolean!
     }
 `;
 
 const resolvers = {
-    Mutation: {
-        Project: (parent, args, context) => {
-            return ({hasProjectID: (args.projectID), ...args});
-        },
-    },
     Query: {
         me: (parent, args, context) => {
             if (!context.role.has(Permission.ACCESS_PROFILE))
@@ -97,7 +92,6 @@ const resolvers = {
     User: {
         name: async (parent, args, context) => {
             let result = await AccountManager.getProperties(context.id, ['name']);
-            console.log(result);
             return result.name;
         },
         avatarUrl: async (parent, args, context) => {
@@ -109,6 +103,17 @@ const resolvers = {
         },
         id: (parent, args, context) => {
             return context.id.toHexString();
+        }
+    },
+    Mutation: {
+        Project: (parent, args, context) => {
+            return ({hasProjectID: (args.projectID), ...args});
+        },
+        Server: () => ({}),
+        User: (parent, args, context) => {
+            if (!context.role.allNames.includes('USER'))
+                throw new AuthenticationError('You cannot perform this action.');
+            return ({})
         }
     },
     ProjectOps: {
@@ -132,22 +137,21 @@ const resolvers = {
             return ProjectManager.update(context.id, parent.projectID, {...args.data});
         }
     },
-    WhitelistOps: (parent, args, context) => {
-        if(!context.role.has(Permission.MODIFY_WHITELIST))
-            throw new AuthenticationError('You cannot perform this action.');
-        return {
-            set: (parent, args) => SettingsManager.whitelist.set(args.status),
-            add: (parent, args) => SettingsManager.whitelist.add(args.name,args.userID),
-            remove: (parent, args) => SettingsManager.whitelist.remove(args.userID),
-            list: () => SettingsManager.whitelist.getList()
-        };
-    },
-    UserOps: (parent, args, context) => {
-        if(!context.role.allNames.includes('USER'))
-            throw new AuthenticationError('You cannot perform this action.');
-        return {
-            delete: (parent, args) => AccountManager.deleteAccount(context.accountID, args.confirm),
+    ServerOps: {
+        Whitelist: (parent, args, context) => {
+            if (!context.role.has(Permission.MODIFY_WHITELIST))
+                throw new AuthenticationError('You cannot perform this action.');
+            return ({});
         }
+    },
+    WhitelistOps: {
+        set: (parent, args) => SettingsManager.whitelist.set(args.status),
+        add: (parent, args) => SettingsManager.whitelist.add(args.name, args.userID),
+        remove: (parent, args) => SettingsManager.whitelist.remove(args.userID),
+        list: () => SettingsManager.whitelist.getList(),
+    },
+    UserOps: {
+        delete: (parent, args, context) => AccountManager.deleteAccount(context.id, args.confirm),
     }
 };
 
@@ -177,8 +181,7 @@ const server = new ApolloServer({
             throw new AuthenticationError('Invalid ID');
         }
         let role = await AccountManager.getRole(oid);
-        if(!role){
-            console.log('invalid id')
+        if (!role) {
             throw new AuthenticationError('Invalid ID');
         }
 

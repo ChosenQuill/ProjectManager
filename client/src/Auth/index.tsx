@@ -161,12 +161,13 @@ class Api {
         history.push('/login');
     }
 
-    logout() {
+    logout(displayMessage = true) {
         this.clearToken(true);
         history.push('/login');
         GraphQLClient.clearStore();
         persistor.purge();
-        message.success("Logged Out");
+        if(displayMessage)
+            message.success("Logged Out");
         console.log("Logging Out");
     }
 
