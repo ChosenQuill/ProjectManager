@@ -9,7 +9,6 @@ const {Role, Permission} = require('../role');
 
 const typeDefs = gql`
 
-    # Queries
     type Query {
         me: User!
         projects: [ProjectData!]!
@@ -39,6 +38,7 @@ const typeDefs = gql`
     # Mutations
     type Mutation {
         Project(projectID: String) : ProjectOps!
+        User: UserOps!
         Server : ServerOps!
     }
 
@@ -68,6 +68,10 @@ const typeDefs = gql`
     type WhitelistEntry {
         name: String!
         id: String!
+    }
+    
+    type UserOps {
+        delete(confirm: Boolean!) : Boolean!
     }
 `;
 
@@ -137,6 +141,13 @@ const resolvers = {
             remove: (parent, args) => SettingsManager.whitelist.remove(args.userID),
             list: () => SettingsManager.whitelist.getList()
         };
+    },
+    UserOps: (parent, args, context) => {
+        if(!context.role.allNames.includes('USER'))
+            throw new AuthenticationError('You cannot perform this action.');
+        return {
+            delete: (parent, args) => AccountManager.deleteAccount(context.accountID, args.confirm),
+        }
     }
 };
 
@@ -167,6 +178,7 @@ const server = new ApolloServer({
         }
         let role = await AccountManager.getRole(oid);
         if(!role){
+            console.log('invalid id')
             throw new AuthenticationError('Invalid ID');
         }
 

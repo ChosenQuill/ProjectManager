@@ -2,7 +2,21 @@ import React, {useEffect, useState} from "react";
 
 import {AuthApi, AuthLevel, LevelCheck, PermissionCheck, RoleCheck} from "../Auth";
 import {Redirect, Route, Switch, useParams} from 'react-router-dom';
-import {Button, Card, Icon, Input, Layout, List, Menu, message, PageHeader, Popconfirm, Typography} from "antd";
+import {
+    Button,
+    Card,
+    Col,
+    Icon,
+    Input,
+    Layout,
+    List,
+    Menu,
+    message, Modal,
+    PageHeader,
+    Popconfirm,
+    Row,
+    Typography
+} from "antd";
 import {gql} from 'apollo-boost';
 
 import history from '../History'
@@ -29,7 +43,7 @@ function Manager() {
             <ManagerSider selected={selectedKeys} setSelected={setSelected}/>
             <Content>
                 <Switch>
-                    <Route exact path='/home' render={(props) =><Home setSelected={setSelected} {...props}/>}/>
+                    <Route exact path='/home' render={(props) => <Home setSelected={setSelected} {...props}/>}/>
                     <Route path='/project/:id' render={(props) => <Edit setSelected={setSelected} {...props} />}/>
                     <Route path='/settings' render={(props) => <Settings setSelected={setSelected} {...props} />}/>
                     <Route render={() => <Redirect to='/home'/>}/>
@@ -39,20 +53,52 @@ function Manager() {
     );
 }
 
+const DELETE_ACC = gql`
+    mutation deleteUser {
+        User{
+            delete(confirm:true)
+        }
+    }
+`;
 
 function Settings(props) {
     useEffect(() => props.setSelected(['settings']), []);
+
+    const [showDM, setDM] = useState(false); //Delete Modal
+    const [deleteAcc] = useMutation(DELETE_ACC, {
+        onCompleted: res=> {
+            console.log(res);
+
+        }
+    });
 
     return (
         <Card className='card'>
             <PageHeader onBack={() => history.push('/home')} title="Settings" subTitle="Change your info">
                 <Paragraph>
-                    <Text>
-                        Name:
-                    </Text>
-                    <Input maxLength={4}/>
+                    <Row>
+                        <Col span={12}>
+                            <Button type='danger' onClick={() => setDM(true)}>Delete Your Account</Button>
+                            <Modal
+                                visible={showDM}
+                                onCancel={() => setDM(false)}
+                                onOk={() => deleteAcc()}
+                                title={'Delete Account'}
+                            >
+                                <Title level={3}>
+                                    Are you sure you want to delete your account?
+                                </Title>
+                                <Paragraph>
+                                    By deleting your account,
+                                    all projects and data you have created will be <strong>permanently deleted</strong>,
+                                    and will not be accessible again.
+                                </Paragraph>
+                            </Modal>
+                        </Col>
+                    </Row>
                 </Paragraph>
-                <Button type='danger'>Delete Your Account</Button>
+
+
             </PageHeader>
         </Card>
     )
@@ -195,7 +241,7 @@ function Projects() {
                     }}
                     footer={(
                         <React.Fragment>
-                            <Input />
+                            <Input/>
                         </React.Fragment>
                     )}
                 />

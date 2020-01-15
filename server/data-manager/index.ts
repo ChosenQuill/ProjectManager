@@ -15,6 +15,9 @@ dbm.onceConnected((db) => {
     users.createIndex({
         "connections": 1
     });
+    users.createIndex({
+        "accountID": 1,
+    });
 
     settings = db.collection('settings');
     settings.createIndex({
@@ -138,6 +141,17 @@ class AccountManager {
         return results.role;
     }
 
+
+    // Mutations (Set)
+
+    async deleteAccount(accountID: ObjectID, confirm: Boolean) : Promise<Boolean> {
+        if(confirm){
+            // users.findOneAndDelete({accountID: accountID});
+            // accounts.findOneAndDelete({_id: accountID});
+            return true;
+        }
+        return false;
+    }
 }
 
 export interface AccountInfo {
