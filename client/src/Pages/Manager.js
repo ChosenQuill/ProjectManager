@@ -193,6 +193,11 @@ function Projects() {
                             </List.Item>
                         )
                     }}
+                    footer={(
+                        <React.Fragment>
+                            <Input />
+                        </React.Fragment>
+                    )}
                 />
             </React.Fragment>
         )
