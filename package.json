@@ -1,0 +1,18 @@
+{
+  "name": "projectmanager",
+  "version": "1.0.0",
+  "description": "A full stack web-app to manage all your projects.",
+  "scripts": {
+    "dev:up": "docker-compose -f docker-compose.dev.yml up",
+    "dev:down": "docker-compose -f docker-compose.dev.yml down",
+    "dev:uninstall": "docker-compose -f docker-compose.dev.yml down --rmi all",
+    "dev:connect:api": "docker exec -it pm-backend /bin/sh",
+    "dev:connect:db": "mongo"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://labs.suredroid.com/chosen/ProjectManager.git"
+  },
+  "author": "SureDroid",
+  "license": "SEE LICENSE IN LICENSE FILE"
+}

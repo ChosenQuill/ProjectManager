@@ -1,0 +1,55 @@
+version: '3.7'
+
+services:
+  backend:
+    build: ./server
+    image: pm-backend
+    container_name: pm-backend
+    ports:
+      - 5000:5000
+    environment:
+      - SITE_LOC=http://localhost:3000
+      - BACKEND_LOC=http://localhost:5000
+      - DATABASE_LOC=pm-mongodb
+    volumes:
+      - ./server:/app
+#    restart: unless-stopped
+    depends_on:
+      - database
+    networks:
+      - app-network
+
+  frontend:
+    build:
+      context: ./client
+      target: dev
+    image: pm-client
+    container_name: pm-frontend
+    ports:
+      - 3000:3000
+    volumes:
+      - ./client/src:/app/src
+      - ./client/public:/app/public
+    depends_on:
+      - backend
+    networks:
+      - app-network
+
+  database:
+    image: mongo
+    container_name: pm-mongodb
+    logging:
+      driver: none
+    ports:
+      - 27017:27017
+    volumes:
+      - mongodb:/data/db
+    networks:
+      - app-network
+
+volumes:
+  mongodb:
+
+networks:
+  app-network:
+    driver: bridge
