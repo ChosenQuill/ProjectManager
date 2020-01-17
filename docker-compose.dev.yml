@@ -38,8 +38,6 @@ services:
   database:
     image: mongo
     container_name: pm-mongodb
-    logging:
-      driver: none
     ports:
       - 27017:27017
     volumes:
