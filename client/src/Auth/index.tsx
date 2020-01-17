@@ -101,11 +101,11 @@ class Api {
         let [errorDisplayed, setED] = useState(false);
 
         let login = (service) => {
-            if (tos) {
-                window.open(this.serviceUrl(service, signUp), '_self');
-            } else {
-                message.error("You must agree to the terms and conditions before continuing.")
+            if(location.pathname === '/signup' && !tos){
+                message.error("You must agree to the terms and conditions before continuing.");
+                return;
             }
+            window.open(this.serviceUrl(service, signUp), '_self');
         };
 
         if (query.token && !signUp) {
