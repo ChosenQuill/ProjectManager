@@ -1,11 +1,8 @@
 import {Db} from "mongodb";
 
-// const {Db} = require("mongodb");
-
-
 const MongoClient = require('mongodb').MongoClient;
 
-const url = 'mongodb://localhost:27017';
+const url = `mongodb://${process.env.DATABASE_LOC}:27017`;
 
 // Database Name
 const dbName = 'pm';

@@ -28,3 +28,14 @@ The plan is for external (non-signed) public id's to be used to allow the user t
     > Account Info
     3. name
     4. avatar
+    5. role
+3. Settings | Contains Server Settings
+    1. Name | Name of settings option.
+    2. ... Values
+
+#### Settings Model
+1. Whitelist
+     1. status | Boolean for enabled/disabled
+     2. list [] | Contains array of valid ids (any social service) that is allowed to create an account plus the name.
+        1. name
+        2. id

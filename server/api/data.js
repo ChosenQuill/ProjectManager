@@ -3,11 +3,17 @@ const dbm = require('../database');
 const {ApolloServer, gql, AuthenticationError} = require('apollo-server-express');
 const {buildSchema} = require('graphql');
 const token = require('./token');
-const {ProjectManager, AccountManager} = require('../data-manager');
+const {ProjectManager, AccountManager, SettingsManager} = require('../data-manager');
 const ObjectId = require('mongodb').ObjectId;
 const {Role, Permission} = require('../role');
 
 const typeDefs = gql`
+
+    type Query {
+        me: User!
+        projects: [ProjectData!]!
+        project(projectID: String!) : ProjectData
+    }
 
     type User {
         name: String
@@ -16,15 +22,10 @@ const typeDefs = gql`
         role: Role!
     }
 
-    enum Role {
-        USER,
-        GUEST
-    }
-
-    input ProjectInput {
-        name: String
-        description: String
-        visible: Boolean
+    type Role {
+        name: String!
+        allNames: [String]!
+        permissions: [String]!
     }
 
     type ProjectData {
@@ -34,36 +35,51 @@ const typeDefs = gql`
         visible: Boolean!
     }
 
+    # Mutations
+    type Mutation {
+        Project(projectID: String) : ProjectOps!
+        User : UserOps!
+        Server : ServerOps!
+    }
+
     type ProjectOps {
         create(name: String!) : Boolean!
         update(data : ProjectInput!) : Boolean!
         remove : Boolean!
     }
 
-    # The "Query" type is special: it lists all of the available queries that
-    # clients can execute, along with the return type for each. In this
-    # case, the "books" query returns an array of zero or more Books (defined above).
-    type Query {
-        me: User!
-        projects: [ProjectData!]!
-        project(projectID: String!) : ProjectData
+    input ProjectInput {
+        name: String
+        description: String
+        visible: Boolean
     }
 
+    type ServerOps {
+        Whitelist: WhitelistOps!
+    }
 
-    type Mutation {
-        Project(projectID: String) : ProjectOps
+    type WhitelistOps {
+        set(status: Boolean!) : Boolean!
+        add(name: String!, userID: String!) : Boolean!
+        remove(userID: String!) : Boolean!
+        list : [WhitelistEntry!]!
+    }
+
+    type WhitelistEntry {
+        name: String!
+        id: String!
+    }
+
+    type UserOps {
+        delete(confirm: Boolean!) : Boolean!
     }
 `;
 
 const resolvers = {
-    Mutation: {
-        Project: (parent, args, context) => {
-            return ({hasProjectID: (args.projectID), ...args});
-        }
-
-    },
     Query: {
-        me: () => {
+        me: (parent, args, context) => {
+            if (!context.role.has(Permission.ACCESS_PROFILE))
+                throw new AuthenticationError('You cannot perform this action.');
             return {};
         },
         projects: (parent, args, context) => {
@@ -75,46 +91,73 @@ const resolvers = {
     },
     User: {
         name: async (parent, args, context) => {
-            let result = await AccountManager.getProperties(context.id,['avatar']);
+            let result = await AccountManager.getProperties(context.id, ['name']);
             return result.name;
         },
         avatarUrl: async (parent, args, context) => {
-            let result = await AccountManager.getProperties(context.id,['avatar']);
+            let result = await AccountManager.getProperties(context.id, ['avatar']);
             return result.avatar;
         },
         role: (parent, args, context) => {
-            return context.role.name;
+            return context.role;
         },
         id: (parent, args, context) => {
             return context.id.toHexString();
         }
     },
+    Mutation: {
+        Project: (parent, args, context) => {
+            return ({hasProjectID: (args.projectID), ...args});
+        },
+        Server: () => ({}),
+        User: (parent, args, context) => {
+            if (!context.role.allNames.includes('USER'))
+                throw new AuthenticationError('You cannot perform this action.');
+            return ({})
+        }
+    },
     ProjectOps: {
         create: (parent, args, context) => {
-            if(!context.role.has(Permission.CREATE_PROJECT))
+            if (!context.role.has(Permission.CREATE_PROJECT))
                 throw new AuthenticationError('You cannot perform this action.');
             return ProjectManager.create(context.id, args.name);
         },
         remove: (parent, args, context) => {
-            if(!context.role.has(Permission.DELETE_PROJECT))
+            if (!context.role.has(Permission.DELETE_PROJECT))
                 throw new AuthenticationError('You cannot perform this action.');
-            if(!parent.hasProjectID)
+            if (!parent.hasProjectID)
                 throw new Error('Invalid Request');
             return ProjectManager.delete(context.id, parent.projectID);
         },
         update: (parent, args, context) => {
-            if(!context.role.has(Permission.UPDATE_PROJECT))
+            if (!context.role.has(Permission.UPDATE_PROJECT))
                 throw new AuthenticationError('You cannot perform this action.');
-            if(!parent.hasProjectID)
+            if (!parent.hasProjectID)
                 throw new Error('Invalid Request');
             return ProjectManager.update(context.id, parent.projectID, {...args.data});
         }
+    },
+    ServerOps: {
+        Whitelist: (parent, args, context) => {
+            if (!context.role.has(Permission.MODIFY_WHITELIST))
+                throw new AuthenticationError('You cannot perform this action.');
+            return ({});
+        }
+    },
+    WhitelistOps: {
+        set: (parent, args) => SettingsManager.whitelist.set(args.status),
+        add: (parent, args) => SettingsManager.whitelist.add(args.name, args.userID),
+        remove: (parent, args) => SettingsManager.whitelist.remove(args.userID),
+        list: () => SettingsManager.whitelist.getList(),
+    },
+    UserOps: {
+        delete: (parent, args, context) => AccountManager.deleteAccount(context.id, args.confirm),
     }
 };
 
 
 const server = new ApolloServer({
-    typeDefs, resolvers, context: ({req}) => {
+    typeDefs, resolvers, context: async ({req}) => {
         //ID Grab + Authentication Check
         let id, authenticated = false;
         if (req.headers.identity) {
@@ -128,16 +171,21 @@ const server = new ApolloServer({
             throw new AuthenticationError("Must either have an identity or authorization token.");
         }
 
-        if(!dbm.isConnected()){
+        if (!dbm.isConnected()) {
             throw Error('Database Not Online');
         }
 
         // Valid OID Check
         let oid = new ObjectId(id);
-        if (oid.toHexString() !== id || !AccountManager.has(oid)) {
-            throw new AuthenticationError('Invalid ID')
+        if (oid.toHexString() !== id) {
+            throw new AuthenticationError('Invalid ID');
         }
-        return new User(oid, authenticated ? Role.USER : Role.GUEST);
+        let role = await AccountManager.getRole(oid);
+        if (!role) {
+            throw new AuthenticationError('Invalid ID');
+        }
+
+        return new User(oid, authenticated ? Role[role] : Role.GUEST);
     }
 });
 

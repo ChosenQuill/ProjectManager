@@ -1,17 +1,29 @@
 import React, {useEffect, useState} from "react";
 
-import {AuthLevel, LevelCheck, LevelManager} from "../Auth";
-import {Switch, Route, Redirect, useParams} from 'react-router-dom';
-import {Button, Card, Form, Input, List, message, PageHeader, Popconfirm, Typography, Menu, Layout, Icon} from "antd";
+import {AuthApi, AuthLevel, LevelCheck, PermissionCheck, RoleCheck} from "../Auth";
+import {Redirect, Route, Switch, useParams} from 'react-router-dom';
+import {
+    Button,
+    Card,
+    Col,
+    Icon,
+    Input,
+    Layout,
+    List,
+    Menu,
+    message, Modal,
+    PageHeader,
+    Popconfirm,
+    Row,
+    Typography
+} from "antd";
 import {gql} from 'apollo-boost';
 
 import history from '../History'
 import {useMutation, useQuery} from "@apollo/react-hooks";
 import Loading from "../Components/Loading";
-
 import './Manager.scss';
 import ReactMarkdown from "react-markdown";
-import slugify from "slugify";
 
 const {Title, Paragraph, Text} = Typography;
 const {SubMenu} = Menu;
@@ -20,38 +32,86 @@ const {Header, Content, Footer, Sider} = Layout;
 
 function Manager() {
     const [selectedKeys, setSelected] = useState(['home']);
+    useEffect(() => {
+        if (!AuthApi.getToken()) {
+            AuthApi.logout();
+        }
+    }, []);
 
     return (
-        <LevelManager>
-            <LevelCheck level={AuthLevel.USER} redirect={true}>
-                <ManagerSider selected={selectedKeys} setSelected={setSelected}/>
-                <Content>
-                    <Switch>
-                        <Route exact path='/home' render={(props) => <Home setSelected={setSelected} {...props}/>}/>
-                        <Route path='/project/:id' render={(props) => <Edit setSelected={setSelected} {...props} />}/>
-                        <Route path='/settings' render={(props) => <Settings setSelected={setSelected} {...props} />}/>
-                        <Route render={() => <Redirect to='/home'/>}/>
-                    </Switch>
-                </Content>
-
-            </LevelCheck>
-        </LevelManager>
+        <RoleCheck name='USER'>
+            <ManagerSider selected={selectedKeys} setSelected={setSelected}/>
+            <Content>
+                <Switch>
+                    <Route exact path='/home' render={(props) => <Home setSelected={setSelected} {...props}/>}/>
+                    <Route path='/project/:id' render={(props) => <Edit setSelected={setSelected} {...props} />}/>
+                    <Route path='/settings' render={(props) => <Settings setSelected={setSelected} {...props} />}/>
+                    <Route render={() => <Redirect to='/home'/>}/>
+                </Switch>
+            </Content>
+        </RoleCheck>
     );
 }
 
+const DELETE_ACC = gql`
+    mutation deleteUser {
+        User{
+            delete(confirm:true)
+        }
+    }
+`;
 
 function Settings(props) {
     useEffect(() => props.setSelected(['settings']), []);
 
+    const [showDM, setDM] = useState(false); //Delete Modal
+    const [deleteAcc] = useMutation(DELETE_ACC, {
+        onCompleted: res=> {
+            if(res.User.delete){
+                AuthApi.logout(false);
+                message.success('Your account has deleted.')
+            }
+            else {
+                message.error('There was an error deleting your account, please contact support.')
+            }
+
+        }
+    });
+
     return (
         <Card className='card'>
             <PageHeader onBack={() => history.push('/home')} title="Settings" subTitle="Change your info">
-                Some settings here..
+                <Paragraph>
+                    <Row>
+                        <Col span={12}>
+                            <Button type='danger' onClick={() => setDM(true)}>Delete Your Account</Button>
+                            <Modal
+                                visible={showDM}
+                                onCancel={() => setDM(false)}
+                                onOk={() => deleteAcc()}
+                                title={'Delete Account'}
+                            >
+                                <Title level={3}>
+                                    Are you sure you want to delete your account?
+                                </Title>
+                                <Paragraph>
+                                    By deleting your account,
+                                    all projects and data you have created will be <strong>permanently deleted</strong>,
+                                    and will not be accessible again.
+                                </Paragraph>
+                            </Modal>
+                        </Col>
+                    </Row>
+                </Paragraph>
+
+
             </PageHeader>
         </Card>
     )
 
 }
+
+// TODO Add whitelist settings page
 
 const GET_PROJS = gql`
     query getProjs {
@@ -66,8 +126,9 @@ const GET_PROJS = gql`
 function ManagerSider(props) {
     const {loading, error, data} = useQuery(GET_PROJS);
     const {selected, setSelected} = props;
+
     return (
-        <Sider width={200} style={{background: '#'}}>
+        <Sider width={200} style={{background: '#', marginBottom: '-70px'}}>
             <Menu
                 mode="inline"
                 defaultSelectedKeys={['home']}
@@ -139,7 +200,12 @@ function Projects() {
         }).then(value => {
             message.success('Project has been deleted!');
         }).catch(err => {
-            message.error(err.graphQLErrors[0].message);
+            console.log(err);
+            if (err.graphQLErrors) {
+                message.error(err.graphQLErrors[0].message);
+            } else {
+                message.error(err.message);
+            }
         });
     };
 
@@ -170,7 +236,7 @@ function Projects() {
                                             placement='topLeft'
                                 >
                                     <Button type='danger' shape='circle' icon='delete'/>
-                                </Popconfirm>
+                            </Popconfirm>
                             ]}>
                                 <List.Item.Meta
                                     title={item.name}
@@ -179,6 +245,15 @@ function Projects() {
                             </List.Item>
                         )
                     }}
+                    footer={(
+                        <div>
+                            <Row>
+                                <Col span={6}>
+                                    <Input style={{width:'50px'}}/>
+                                </Col>
+                            </Row>
+                        </div>
+                    )}
                 />
             </React.Fragment>
         )
@@ -216,7 +291,7 @@ const DELETE_PROJ = gql`
 
 function Edit(props) {
     let {id} = useParams();
-    const {loading, error, data, refetch} = useQuery(GET_PROJ, {variables: {id}});
+    const {loading, err, data, refetch} = useQuery(GET_PROJ, {variables: {id}});
 
     const [changesMade, setChanges] = useState(false);
     const [project, setProject] = useState({});
@@ -273,9 +348,13 @@ function Edit(props) {
                 <Loading/>
             </Card>
         );
-    else if (error) {
-        message.error(error.graphQLErrors[0].message);
-        console.log(error);
+    else if (err) {
+        if (err.graphQLErrors) {
+            message.error(err.graphQLErrors[0].message);
+        } else {
+            message.error(err.message);
+        }
+        console.log(err);
         return <Redirect to='/home'/>;
     } else {
         if (Object.keys(project).length === 0) {
@@ -300,7 +379,6 @@ function Edit(props) {
                     <Button type='primary' disabled={!changesMade} onClick={saveChanges} style={{marginTop: '14px'}}>
                         Save Changes
                     </Button>
-
                 }
             </Card>
         )
